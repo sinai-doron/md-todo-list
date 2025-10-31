@@ -3,6 +3,7 @@ import type { KeyboardEvent } from 'react';
 import styled from 'styled-components';
 import type { Task } from '../types/Task';
 import { linkifyText } from '../utils/linkify';
+import { exportSingleTaskToMarkdown } from '../utils/exportMarkdown';
 
 const ItemContainer = styled.div<{ $level: number; $isDragging?: boolean; $isDropTarget?: boolean }>`
   margin-left: ${props => props.$level * 24}px;
@@ -182,19 +183,19 @@ const ButtonGroup = styled.div<{ $isHeader?: boolean }>`
   }
 `;
 
-const ActionButton = styled.button`
-  background: none;
-  border: 1px solid #ddd;
+const ActionButton = styled.button<{ $showFeedback?: boolean }>`
+  background: ${props => props.$showFeedback ? '#4caf50' : 'none'};
+  border: 1px solid ${props => props.$showFeedback ? '#4caf50' : '#ddd'};
   border-radius: 3px;
   padding: 4px 8px;
   font-size: 12px;
   cursor: pointer;
-  color: #666;
+  color: ${props => props.$showFeedback ? 'white' : '#666'};
   transition: all 0.2s;
 
   &:hover {
-    background: #e0e0e0;
-    color: #333;
+    background: ${props => props.$showFeedback ? '#4caf50' : '#e0e0e0'};
+    color: ${props => props.$showFeedback ? 'white' : '#333'};
   }
 `;
 
@@ -235,6 +236,7 @@ export const TodoItem: React.FC<TodoItemProps> = ({
   const [editText, setEditText] = useState(task.text);
   const [isDragging, setIsDragging] = useState(false);
   const [dropPosition, setDropPosition] = useState<'before' | 'after' | 'inside' | null>(null);
+  const [showCopyFeedback, setShowCopyFeedback] = useState(false);
 
   const handleSave = () => {
     if (editText.trim()) {
@@ -320,6 +322,17 @@ export const TodoItem: React.FC<TodoItemProps> = ({
     setDropPosition(null);
   };
 
+  const handleCopyToClipboard = async () => {
+    try {
+      const markdown = exportSingleTaskToMarkdown(task);
+      await navigator.clipboard.writeText(markdown);
+      setShowCopyFeedback(true);
+      setTimeout(() => setShowCopyFeedback(false), 2000);
+    } catch (err) {
+      console.error('Failed to copy to clipboard:', err);
+    }
+  };
+
   return (
     <>
       <ItemContainer 
@@ -400,6 +413,15 @@ export const TodoItem: React.FC<TodoItemProps> = ({
                     <span className="material-symbols-outlined" style={{ fontSize: '18px' }}>upload_file</span>
                   </ActionButton>
                 )}
+                <ActionButton 
+                  onClick={handleCopyToClipboard} 
+                  title={showCopyFeedback ? "Copied!" : "Copy section to clipboard"}
+                  $showFeedback={showCopyFeedback}
+                >
+                  <span className="material-symbols-outlined" style={{ fontSize: '18px' }}>
+                    {showCopyFeedback ? 'check' : 'content_copy'}
+                  </span>
+                </ActionButton>
                 <DeleteButton onClick={() => onDelete(task.id)}>
                   <span className="material-symbols-outlined" style={{ fontSize: '18px' }}>delete</span>
                 </DeleteButton>
@@ -414,6 +436,15 @@ export const TodoItem: React.FC<TodoItemProps> = ({
                     <span className="material-symbols-outlined" style={{ fontSize: '18px' }}>upload_file</span>
                   </ActionButton>
                 )}
+                <ActionButton 
+                  onClick={handleCopyToClipboard} 
+                  title={showCopyFeedback ? "Copied!" : "Copy task to clipboard"}
+                  $showFeedback={showCopyFeedback}
+                >
+                  <span className="material-symbols-outlined" style={{ fontSize: '18px' }}>
+                    {showCopyFeedback ? 'check' : 'content_copy'}
+                  </span>
+                </ActionButton>
                 <DeleteButton onClick={() => onDelete(task.id)}>
                   <span className="material-symbols-outlined" style={{ fontSize: '18px' }}>delete</span>
                 </DeleteButton>
