@@ -33,7 +33,7 @@ COPY --from=builder /app/dist /usr/share/nginx/html
 
 # Create a custom nginx configuration for SPA routing
 RUN echo 'server { \
-    listen 80; \
+    listen 8080; \
     server_name _; \
     root /usr/share/nginx/html; \
     index index.html; \
@@ -47,6 +47,6 @@ RUN echo 'server { \
     gzip_types text/plain text/css text/xml text/javascript application/x-javascript application/xml+rss application/json application/javascript; \
 }' > /etc/nginx/conf.d/default.conf
 
-EXPOSE 80
+EXPOSE 8080
 
 CMD ["nginx", "-g", "daemon off;"]
