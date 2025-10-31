@@ -91,3 +91,64 @@ function addTaskToHierarchy(
   // Add current task to stack
   stack.push({ task, level });
 }
+
+/**
+ * Smart merge: Adds new tasks to existing task list
+ * @param existingTasks - The current task list
+ * @param newTasks - Tasks parsed from new markdown to add
+ * @param parentId - Optional ID of parent task to add under (null = root level)
+ * @returns Updated task list with new tasks merged in
+ */
+export function mergeTasks(
+  existingTasks: Task[],
+  newTasks: Task[],
+  parentId?: string
+): Task[] {
+  if (newTasks.length === 0) {
+    return existingTasks;
+  }
+
+  // Helper to adjust levels of tasks and their children
+  const adjustLevels = (tasks: Task[], levelOffset: number): Task[] => {
+    return tasks.map(task => ({
+      ...task,
+      level: task.level + levelOffset,
+      children: task.children ? adjustLevels(task.children, levelOffset) : undefined,
+    }));
+  };
+
+  // If no parent, append to root level
+  if (!parentId) {
+    // Adjust levels to be root level (0)
+    const adjustedNewTasks = adjustLevels(newTasks, 0);
+    return [...existingTasks, ...adjustedNewTasks];
+  }
+
+  // Find parent task and add as children
+  const addToParent = (tasks: Task[]): Task[] => {
+    return tasks.map(task => {
+      if (task.id === parentId) {
+        // Found the parent - add new tasks as children
+        const parentLevel = task.level;
+        const adjustedNewTasks = adjustLevels(newTasks, parentLevel + 1);
+        
+        return {
+          ...task,
+          children: [...(task.children || []), ...adjustedNewTasks],
+        };
+      }
+      
+      // Recursively search in children
+      if (task.children) {
+        return {
+          ...task,
+          children: addToParent(task.children),
+        };
+      }
+      
+      return task;
+    });
+  };
+
+  return addToParent(existingTasks);
+}

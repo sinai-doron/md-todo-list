@@ -215,6 +215,7 @@ interface TodoItemProps {
   isCollapsed?: boolean;
   onToggleCollapse?: (id: string) => void;
   collapsedSections?: Set<string>;
+  onAddTasksFromMarkdown?: (parentId: string) => void;
 }
 
 export const TodoItem: React.FC<TodoItemProps> = ({
@@ -227,6 +228,7 @@ export const TodoItem: React.FC<TodoItemProps> = ({
   isCollapsed = false,
   onToggleCollapse,
   collapsedSections,
+  onAddTasksFromMarkdown,
 }) => {
   const [isEditing, setIsEditing] = useState(false);
   const [editText, setEditText] = useState(task.text);
@@ -392,6 +394,11 @@ export const TodoItem: React.FC<TodoItemProps> = ({
                 <ActionButton onClick={() => onAddSubtask(task.id)}>
                   <span className="material-symbols-outlined" style={{ fontSize: '18px' }}>playlist_add</span>
                 </ActionButton>
+                {onAddTasksFromMarkdown && (
+                  <ActionButton onClick={() => onAddTasksFromMarkdown(task.id)} title="Add from Markdown">
+                    <span className="material-symbols-outlined" style={{ fontSize: '18px' }}>upload_file</span>
+                  </ActionButton>
+                )}
                 <DeleteButton onClick={() => onDelete(task.id)}>
                   <span className="material-symbols-outlined" style={{ fontSize: '18px' }}>delete</span>
                 </DeleteButton>
@@ -401,6 +408,11 @@ export const TodoItem: React.FC<TodoItemProps> = ({
                 <ActionButton onClick={() => onAddSubtask(task.id)}>
                   <span className="material-symbols-outlined" style={{ fontSize: '18px' }}>playlist_add</span>
                 </ActionButton>
+                {onAddTasksFromMarkdown && (
+                  <ActionButton onClick={() => onAddTasksFromMarkdown(task.id)} title="Add from Markdown">
+                    <span className="material-symbols-outlined" style={{ fontSize: '18px' }}>upload_file</span>
+                  </ActionButton>
+                )}
                 <DeleteButton onClick={() => onDelete(task.id)}>
                   <span className="material-symbols-outlined" style={{ fontSize: '18px' }}>delete</span>
                 </DeleteButton>
@@ -421,6 +433,7 @@ export const TodoItem: React.FC<TodoItemProps> = ({
           isCollapsed={collapsedSections?.has(child.id) || false}
           onToggleCollapse={onToggleCollapse}
           collapsedSections={collapsedSections}
+          onAddTasksFromMarkdown={onAddTasksFromMarkdown}
         />
       ))}
     </>

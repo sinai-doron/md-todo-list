@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import styled from 'styled-components';
 import type { Task } from '../types/Task';
 import { TodoItem } from './TodoItem';
+import { AddTasksModal } from './AddTasksModal';
 
 const Container = styled.div`
   background: white;
@@ -382,6 +383,7 @@ interface TodoListProps {
   onToggleHideCompleted: () => void;
   onUndo: () => void;
   canUndo: boolean;
+  onAddTasksFromMarkdown: (markdown: string, parentId?: string) => void;
 }
 
 export const TodoList: React.FC<TodoListProps> = ({
@@ -403,10 +405,13 @@ export const TodoList: React.FC<TodoListProps> = ({
   onToggleHideCompleted,
   onUndo,
   canUndo,
+  onAddTasksFromMarkdown,
 }) => {
   const [collapsedSections, setCollapsedSections] = useState<Set<string>>(new Set());
   const [isSpeedDialOpen, setIsSpeedDialOpen] = useState(false);
   const [isOverflowOpen, setIsOverflowOpen] = useState(false);
+  const [isAddTasksModalOpen, setIsAddTasksModalOpen] = useState(false);
+  const [addTasksTargetId, setAddTasksTargetId] = useState<string | undefined>(undefined);
 
   const countTasks = (taskList: Task[]): { total: number; completed: number } => {
     let total = 0;
@@ -525,6 +530,40 @@ export const TodoList: React.FC<TodoListProps> = ({
     setIsOverflowOpen(false);
   };
 
+  const handleOpenAddTasksModal = (parentId?: string) => {
+    setAddTasksTargetId(parentId);
+    setIsAddTasksModalOpen(true);
+    setIsSpeedDialOpen(false);
+  };
+
+  const handleCloseAddTasksModal = () => {
+    setIsAddTasksModalOpen(false);
+    setAddTasksTargetId(undefined);
+  };
+
+  const handleAddTasks = (markdown: string) => {
+    onAddTasksFromMarkdown(markdown, addTasksTargetId);
+  };
+
+  // Helper to get task name by ID (for modal title)
+  const getTaskNameById = (taskId: string | undefined): string | undefined => {
+    if (!taskId) return undefined;
+    
+    const findTask = (tasks: Task[]): Task | null => {
+      for (const task of tasks) {
+        if (task.id === taskId) return task;
+        if (task.children) {
+          const found = findTask(task.children);
+          if (found) return found;
+        }
+      }
+      return null;
+    };
+    
+    const task = findTask(tasks);
+    return task?.text;
+  };
+
   // Recursive render function to properly handle collapsed state at all levels
   const renderTask = (task: Task): React.ReactNode => (
     <TodoItem
@@ -538,6 +577,7 @@ export const TodoList: React.FC<TodoListProps> = ({
       isCollapsed={collapsedSections.has(task.id)}
       onToggleCollapse={toggleSectionCollapse}
       collapsedSections={collapsedSections}
+      onAddTasksFromMarkdown={handleOpenAddTasksModal}
     />
   );
 
@@ -627,6 +667,12 @@ export const TodoList: React.FC<TodoListProps> = ({
           />
           <SpeedDialActions $isOpen={isSpeedDialOpen}>
             <MiniFAB 
+              data-tooltip="Add from Markdown"
+              onClick={() => handleSpeedDialAction(() => handleOpenAddTasksModal())}
+            >
+              <span className="material-symbols-outlined" style={{ fontSize: '20px' }}>post_add</span>
+            </MiniFAB>
+            <MiniFAB 
               data-tooltip="Add Section"
               onClick={() => handleSpeedDialAction(onAddSection)}
             >
@@ -646,6 +692,12 @@ export const TodoList: React.FC<TodoListProps> = ({
             +
           </FAB>
         </SpeedDialContainer>
+        <AddTasksModal
+          isOpen={isAddTasksModalOpen}
+          onClose={handleCloseAddTasksModal}
+          onAdd={handleAddTasks}
+          targetName={getTaskNameById(addTasksTargetId)}
+        />
       </>
     );
   }
@@ -758,6 +810,12 @@ export const TodoList: React.FC<TodoListProps> = ({
         />
         <SpeedDialActions $isOpen={isSpeedDialOpen}>
           <MiniFAB 
+            data-tooltip="Add from Markdown"
+            onClick={() => handleSpeedDialAction(() => handleOpenAddTasksModal())}
+          >
+            <span className="material-symbols-outlined" style={{ fontSize: '20px' }}>post_add</span>
+          </MiniFAB>
+          <MiniFAB 
             data-tooltip="Add Section"
             onClick={() => handleSpeedDialAction(onAddSection)}
           >
@@ -777,6 +835,12 @@ export const TodoList: React.FC<TodoListProps> = ({
           +
         </FAB>
       </SpeedDialContainer>
+      <AddTasksModal
+        isOpen={isAddTasksModalOpen}
+        onClose={handleCloseAddTasksModal}
+        onAdd={handleAddTasks}
+        targetName={getTaskNameById(addTasksTargetId)}
+      />
     </>
   );
 };

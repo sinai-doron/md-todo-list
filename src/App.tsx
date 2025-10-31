@@ -5,7 +5,7 @@ import { TodoList } from './components/TodoList';
 import { Sidebar } from './components/Sidebar';
 import type { Task } from './types/Task';
 import type { TodoList as TodoListType } from './types/TodoList';
-import { parseMarkdownToTasks } from './utils/markdownParser';
+import { parseMarkdownToTasks, mergeTasks } from './utils/markdownParser';
 import { exportTasksToMarkdown } from './utils/exportMarkdown';
 import {
   loadAllLists,
@@ -683,6 +683,28 @@ function App() {
     reader.readAsText(file);
   };
 
+  const handleAddTasksFromMarkdown = (markdown: string, parentId?: string) => {
+    if (!currentListId) return;
+
+    // Parse the new markdown into tasks
+    const newTasks = parseMarkdownToTasks(markdown);
+    
+    if (newTasks.length === 0) {
+      return;
+    }
+
+    // Save current state to history before making changes
+    const currentTasks = lists[currentListId].tasks;
+    setTaskHistory(prev => [...prev.slice(-19), { tasks: currentTasks, timestamp: Date.now() }]);
+    setCanUndo(true);
+
+    // Merge the new tasks with existing tasks
+    const mergedTasks = mergeTasks(currentTasks, newTasks, parentId);
+
+    // Update the task list
+    updateCurrentListTasks(() => mergedTasks);
+  };
+
   // Filter tasks by search query
   const filterTasksBySearch = (tasks: Task[], query: string): Task[] => {
     if (!query.trim()) return tasks;
@@ -759,6 +781,7 @@ function App() {
                   onToggleHideCompleted={() => setHideCompleted(!hideCompleted)}
                   onUndo={handleUndo}
                   canUndo={canUndo}
+                  onAddTasksFromMarkdown={handleAddTasksFromMarkdown}
                 />
               </>
             )}
