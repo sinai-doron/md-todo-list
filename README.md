@@ -83,12 +83,12 @@ The application will open at `http://localhost:5173` (or another port if 5173 is
 
 ### Available Scripts
 
-| Command | Description |
-|---------|-------------|
-| `pnpm dev` | Starts the development server with hot module replacement |
-| `pnpm build` | Builds the app for production to the `dist` folder |
-| `pnpm preview` | Preview the production build locally |
-| `pnpm lint` | Runs ESLint to check code quality |
+| Command        | Description                                               |
+| -------------- | --------------------------------------------------------- |
+| `pnpm dev`     | Starts the development server with hot module replacement |
+| `pnpm build`   | Builds the app for production to the `dist` folder        |
+| `pnpm preview` | Preview the production build locally                      |
+| `pnpm lint`    | Runs ESLint to check code quality                         |
 
 ---
 
@@ -121,19 +121,19 @@ The transformation happens **automatically** as you type (with 300ms debounce). 
 
 ### 4️⃣ Manage Your Tasks
 
-| Action | How To |
-|--------|--------|
-| **Complete/Uncomplete** | Click the checkbox (also marks all children) |
-| **Edit Text** | Click on the task text, edit, then press Enter or click away |
-| **Add Subtask** | Click **"+ Sub"** button (or **"+ Add Task"** for headers) |
-| **Delete Task** | Click **"Delete"** button |
-| **Add Root Task** | Click **"+ Add Task"** button at the bottom |
-| **Add Section** | Click **"+ Add Section"** button at the bottom |
-| **Reorder Tasks** | Drag the **⋮⋮** handle to move tasks |
-| **Collapse Section** | Click **▼**/**▶** button on headers with children |
-| **Hide Completed** | Toggle the **"Hide Completed"** checkbox |
-| **Search Tasks** | Type in the search box to filter tasks |
-| **Export Markdown** | Click **"📋 Copy"** to copy or **"💾 Download"** to save as file |
+| Action                  | How To                                                         |
+| ----------------------- | -------------------------------------------------------------- |
+| **Complete/Uncomplete** | Click the checkbox (also marks all children)                   |
+| **Edit Text**           | Click on the task text, edit, then press Enter or click away   |
+| **Add Subtask**         | Click **"+ Sub"** button (or **"+ Add Task"** for headers)     |
+| **Delete Task**         | Click **"Delete"** button                                      |
+| **Add Root Task**       | Click **"+ Add Task"** button at the bottom                    |
+| **Add Section**         | Click **"+ Add Section"** button at the bottom                 |
+| **Reorder Tasks**       | Drag the **⋮⋮** handle to move tasks                           |
+| **Collapse Section**    | Click **▼**/**▶** button on headers with children              |
+| **Hide Completed**      | Toggle the **"Hide Completed"** checkbox                       |
+| **Search Tasks**        | Type in the search box to filter tasks                         |
+| **Export Markdown**     | Click **"📋 Copy"** to copy or **"💾 Download"** to save as file |
 
 ### 5️⃣ Keyboard Shortcuts
 
@@ -462,7 +462,7 @@ MIT License - feel free to use this project for any purpose.
 
 ## 🙏 Acknowledgments
 
-- Background image: Forest road photography
+- Background image: Photo by [John Towner](https://unsplash.com/@heytowner) on [Unsplash](https://unsplash.com/photos/a-dirt-road-surrounded-by-trees-and-fog-p-rN-n6Miag)
 - Icons: Unicode emoji characters
 - Inspiration: Notion, Todoist, and other modern task management apps
 
