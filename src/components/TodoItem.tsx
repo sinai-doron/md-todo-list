@@ -30,6 +30,15 @@ const ItemContent = styled.div<{ $isHeader?: boolean; $isDraggable?: boolean; $c
   }
 `;
 
+const CollapseButtonContainer = styled.div`
+  width: 20px;
+  height: 20px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+`;
+
 const CollapseButton = styled.button`
   background: none;
   border: none;
@@ -358,13 +367,15 @@ export const TodoItem: React.FC<TodoItemProps> = ({
           >
             ⋮⋮
           </DragHandle>
-          {task.isHeader && task.children && task.children.length > 0 && (
-            <CollapseButton onClick={() => onToggleCollapse?.(task.id)}>
-              <span className="material-symbols-outlined" style={{ fontSize: '16px' }}>
-                {isCollapsed ? 'keyboard_arrow_right' : 'keyboard_arrow_down'}
-              </span>
-            </CollapseButton>
-          )}
+          <CollapseButtonContainer>
+            {task.children && task.children.length > 0 && (
+              <CollapseButton onClick={() => onToggleCollapse?.(task.id)}>
+                <span className="material-symbols-outlined" style={{ fontSize: '16px' }}>
+                  {isCollapsed ? 'keyboard_arrow_right' : 'keyboard_arrow_down'}
+                </span>
+              </CollapseButton>
+            )}
+          </CollapseButtonContainer>
           {!task.isHeader && (
             <div style={{ position: 'relative', zIndex: 100 }}>
               <Checkbox

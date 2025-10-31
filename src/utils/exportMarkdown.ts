@@ -12,8 +12,8 @@ export function exportTasksToMarkdown(tasks: Task[]): string {
       lines.push(''); // Empty line after header
     } else {
       // Convert to bullet point with proper indentation
-      // Calculate indentation: each level beyond the parent header needs 2 spaces
-      const indentation = '  '.repeat(Math.max(0, task.level - 1));
+      // Each level gets 2 spaces of indentation
+      const indentation = '  '.repeat(task.level);
       // Use checkbox syntax for completed tasks
       const checkbox = task.completed ? '[x]' : '[ ]';
       lines.push(`${indentation}* ${checkbox} ${task.text}`);
@@ -53,7 +53,7 @@ export function exportSingleTaskToMarkdown(task: Task): string {
       // Convert to bullet point with proper indentation
       // Calculate indentation relative to the base level
       const relativeLevel = currentTask.level - baseLevel;
-      const indentation = '  '.repeat(Math.max(0, relativeLevel - 1));
+      const indentation = '  '.repeat(relativeLevel);
       // Use checkbox syntax for completed tasks
       const checkbox = currentTask.completed ? '[x]' : '[ ]';
       lines.push(`${indentation}* ${checkbox} ${currentTask.text}`);
