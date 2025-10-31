@@ -28,10 +28,13 @@ RUN pnpm run build
 # Production image - use nginx to serve static files
 FROM nginx:alpine AS runner
 
-# Copy custom nginx config
+# Copy built assets
 COPY --from=builder /app/dist /usr/share/nginx/html
 
-# Create a custom nginx configuration for SPA routing
+# Remove default nginx configs
+RUN rm /etc/nginx/conf.d/default.conf
+
+# Create a custom nginx configuration for SPA routing on port 8080
 RUN echo 'server { \
     listen 8080; \
     server_name _; \
@@ -46,6 +49,9 @@ RUN echo 'server { \
     gzip_min_length 1024; \
     gzip_types text/plain text/css text/xml text/javascript application/x-javascript application/xml+rss application/json application/javascript; \
 }' > /etc/nginx/conf.d/default.conf
+
+# Also update the main nginx.conf to not listen on default port 80
+RUN sed -i 's/listen\s*80;/listen 8080;/' /etc/nginx/nginx.conf || true
 
 EXPOSE 8080
 
