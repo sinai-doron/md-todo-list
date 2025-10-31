@@ -31,28 +31,29 @@ FROM nginx:alpine AS runner
 # Copy built assets
 COPY --from=builder /app/dist /usr/share/nginx/html
 
-# Remove default nginx configs
+# Remove default site
 RUN rm /etc/nginx/conf.d/default.conf
 
-# Create a custom nginx configuration for SPA routing on port 8080
-RUN echo 'server { \
-    listen 8080; \
-    server_name _; \
-    root /usr/share/nginx/html; \
-    index index.html; \
-    location / { \
-        try_files $uri $uri/ /index.html; \
-    } \
-    # Enable gzip compression \
-    gzip on; \
-    gzip_vary on; \
-    gzip_min_length 1024; \
-    gzip_types text/plain text/css text/xml text/javascript application/x-javascript application/xml+rss application/json application/javascript; \
-}' > /etc/nginx/conf.d/default.conf
+# http-level gzip config (included by nginx.conf -> http { include conf.d/*.conf; })
+# NOTE: No 'server { }' here — these must be in http context
+RUN printf '%s\n' \
+  'gzip on;' \
+  'gzip_vary on;' \
+  'gzip_min_length 1024;' \
+  'gzip_types text/plain text/css text/xml text/javascript application/javascript application/json application/rss+xml;' \
+  > /etc/nginx/conf.d/gzip.conf
 
-# Also update the main nginx.conf to not listen on default port 80
-RUN sed -i 's/listen\s*80;/listen 8080;/' /etc/nginx/nginx.conf || true
+# Server block listening on 8080 with SPA routing
+RUN printf '%s\n' \
+  'server {' \
+  '    listen 8080;' \
+  '    server_name _;' \
+  '    root /usr/share/nginx/html;' \
+  '    index index.html;' \
+  '    location / {' \
+  '        try_files $uri $uri/ /index.html;' \
+  '    }' \
+  '}' > /etc/nginx/conf.d/site.conf
 
 EXPOSE 8080
-
 CMD ["nginx", "-g", "daemon off;"]
