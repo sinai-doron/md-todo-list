@@ -344,7 +344,9 @@ export const TodoItem: React.FC<TodoItemProps> = ({
           </DragHandle>
           {task.isHeader && task.children && task.children.length > 0 && (
             <CollapseButton onClick={() => onToggleCollapse?.(task.id)}>
-              {isCollapsed ? '▶' : '▼'}
+              <span className="material-symbols-outlined" style={{ fontSize: '16px' }}>
+                {isCollapsed ? 'keyboard_arrow_right' : 'keyboard_arrow_down'}
+              </span>
             </CollapseButton>
           )}
           {!task.isHeader && (

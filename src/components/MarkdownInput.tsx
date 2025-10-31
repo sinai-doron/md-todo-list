@@ -198,7 +198,9 @@ export const MarkdownInput: React.FC<MarkdownInputProps> = ({
           </ImportButton>
           {hasContent && (
             <MinimizeButton onClick={onToggleMinimize}>
-              {isMinimized ? '▼' : '▲'}
+              <span className="material-symbols-outlined" style={{ fontSize: '20px' }}>
+                {isMinimized ? 'keyboard_arrow_down' : 'keyboard_arrow_up'}
+              </span>
             </MinimizeButton>
           )}
         </ButtonGroup>
