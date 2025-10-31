@@ -75,6 +75,37 @@ const ContentWrapper = styled.div`
   min-width: 0;
 `;
 
+const Attribution = styled.a`
+  position: fixed;
+  bottom: 16px;
+  left: 16px;
+  background: rgba(0, 0, 0, 0.6);
+  backdrop-filter: blur(8px);
+  color: white;
+  padding: 8px 12px;
+  border-radius: 6px;
+  font-size: 12px;
+  text-decoration: none;
+  z-index: 1000;
+  transition: all 0.2s ease;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  
+  &:hover {
+    background: rgba(0, 0, 0, 0.8);
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+  }
+
+  @media (max-width: 768px) {
+    font-size: 11px;
+    padding: 6px 10px;
+    bottom: 12px;
+    left: 12px;
+  }
+`;
+
 function App() {
   // Multi-list state
   const [lists, setLists] = useState<{ [listId: string]: TodoListType }>({});
@@ -357,6 +388,13 @@ function App() {
   };
 
   const handleUpdate = (id: string, text: string) => {
+    if (!currentListId) return;
+    
+    // Save current state to history before making changes
+    const currentTasks = lists[currentListId].tasks;
+    setTaskHistory(prev => [...prev.slice(-19), { tasks: currentTasks, timestamp: Date.now() }]);
+    setCanUndo(true);
+    
     updateCurrentListTasks((prevTasks) =>
       updateTasksRecursively(prevTasks, (task) =>
         task.id === id ? { ...task, text } : task
@@ -374,6 +412,13 @@ function App() {
   };
 
   const handleDelete = (id: string) => {
+    if (!currentListId) return;
+    
+    // Save current state to history before making changes
+    const currentTasks = lists[currentListId].tasks;
+    setTaskHistory(prev => [...prev.slice(-19), { tasks: currentTasks, timestamp: Date.now() }]);
+    setCanUndo(true);
+    
     updateCurrentListTasks((prevTasks) => removeTaskById(prevTasks, id));
   };
 
@@ -594,6 +639,50 @@ function App() {
     URL.revokeObjectURL(url);
   };
 
+  const handleImportMarkdown = (file: File) => {
+    if (!currentListId) return;
+
+    // Validate file type
+    const fileName = file.name.toLowerCase();
+    if (!fileName.endsWith('.md') && !fileName.endsWith('.txt')) {
+      alert('❌ Invalid file type. Please select a .md or .txt file.');
+      return;
+    }
+
+    // Validate file size (max 1MB)
+    const maxSize = 1048576; // 1MB in bytes
+    if (file.size > maxSize) {
+      alert('❌ File is too large. Maximum file size is 1MB.');
+      return;
+    }
+
+    // Read file content
+    const reader = new FileReader();
+    
+    reader.onload = (e) => {
+      const content = e.target?.result as string;
+      
+      if (content !== undefined) {
+        // Update markdown content
+        setLists((prev) => ({
+          ...prev,
+          [currentListId]: {
+            ...prev[currentListId],
+            markdown: content,
+            isMinimized: true, // Auto-minimize after import
+            updatedAt: Date.now(),
+          },
+        }));
+      }
+    };
+
+    reader.onerror = () => {
+      alert('❌ Failed to read file. Please try again.');
+    };
+
+    reader.readAsText(file);
+  };
+
   // Filter tasks by search query
   const filterTasksBySearch = (tasks: Task[], query: string): Task[] => {
     if (!query.trim()) return tasks;
@@ -649,6 +738,7 @@ function App() {
                   isMinimized={currentList.isMinimized}
                   onToggleMinimize={handleToggleMinimize}
                   hasContent={currentList.tasks.length > 0}
+                  onImport={handleImportMarkdown}
                 />
                 <TodoList
                   tasks={filterTasksBySearch(currentList.tasks, searchQuery)}
@@ -675,6 +765,15 @@ function App() {
           </ContentWrapper>
         </ContentContainer>
       </MainWrapper>
+      <Attribution
+        href="https://unsplash.com/@heytowner?utm_source=todo-app&utm_medium=referral"
+        target="_blank"
+        rel="noopener noreferrer"
+        title="Photo by John Towner on Unsplash"
+      >
+        
+        Image by <span>John Towner</span>
+      </Attribution>
     </AppContainer>
   );
 }

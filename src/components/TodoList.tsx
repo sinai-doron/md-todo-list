@@ -576,7 +576,7 @@ export const TodoList: React.FC<TodoListProps> = ({
                 disabled={!canUndo}
                 style={{ opacity: canUndo ? 1 : 0.3, cursor: canUndo ? 'pointer' : 'not-allowed' }}
               >
-                ↶
+                <span className="material-symbols-outlined">undo</span>
               </IconButton>
               {hasSections && (
                 <>
@@ -584,13 +584,13 @@ export const TodoList: React.FC<TodoListProps> = ({
                     data-tooltip="Collapse All"
                     onClick={handleCollapseAll}
                   >
-                    ▲
+                    <span className="material-symbols-outlined">collapse_all</span>
                   </IconButton>
                   <IconButton
                     data-tooltip="Expand All"
                     onClick={handleExpandAll}
                   >
-                    ▼
+                    <span className="material-symbols-outlined">expand_all</span>
                   </IconButton>
                 </>
               )}
@@ -609,7 +609,7 @@ export const TodoList: React.FC<TodoListProps> = ({
                     Copy Markdown
                   </MenuItem>
                   <MenuItem onClick={() => handleOverflowAction(onDownload)}>
-                    <span className="icon">💾</span>
+                    <span className="material-symbols-outlined icon">download_2</span>
                     Download .md
                   </MenuItem>
                 </OverflowMenu>
@@ -699,7 +699,7 @@ export const TodoList: React.FC<TodoListProps> = ({
               disabled={!canUndo}
               style={{ opacity: canUndo ? 1 : 0.3, cursor: canUndo ? 'pointer' : 'not-allowed' }}
             >
-              ↶
+              <span className="material-symbols-outlined">undo</span>
             </IconButton>
             {hasSections && (
               <>
@@ -707,13 +707,13 @@ export const TodoList: React.FC<TodoListProps> = ({
                   data-tooltip="Collapse All"
                   onClick={handleCollapseAll}
                 >
-                  ▲
+                  <span className="material-symbols-outlined">collapse_all</span>
                 </IconButton>
                 <IconButton
                   data-tooltip="Expand All"
                   onClick={handleExpandAll}
                 >
-                  ▼
+                  <span className="material-symbols-outlined">expand_all</span>
                 </IconButton>
               </>
             )}
@@ -726,16 +726,16 @@ export const TodoList: React.FC<TodoListProps> = ({
               >
                 ⋮
               </IconButton>
-              <OverflowMenu $isOpen={isOverflowOpen}>
-                <MenuItem onClick={() => handleOverflowAction(onExport)}>
-                  <span className="icon">📋</span>
-                  Copy Markdown
-                </MenuItem>
-                <MenuItem onClick={() => handleOverflowAction(onDownload)}>
-                  <span className="icon">💾</span>
-                  Download .md
-                </MenuItem>
-              </OverflowMenu>
+                <OverflowMenu $isOpen={isOverflowOpen}>
+                  <MenuItem onClick={() => handleOverflowAction(onExport)}>
+                    <span className="icon">📋</span>
+                    Copy Markdown
+                  </MenuItem>
+                  <MenuItem onClick={() => handleOverflowAction(onDownload)}>
+                    <span className="material-symbols-outlined icon">download_2</span>
+                    Download .md
+                  </MenuItem>
+                </OverflowMenu>
             </OverflowMenuContainer>
           </ToolbarSection>
         </MaterialToolbar>

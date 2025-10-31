@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useRef } from 'react';
 import styled from 'styled-components';
 
 const Container = styled.div<{ $isMinimized: boolean }>`
@@ -23,6 +23,31 @@ const Title = styled.h2`
   color: #333;
 `;
 
+const ButtonGroup = styled.div`
+  display: flex;
+  gap: 8px;
+  align-items: center;
+`;
+
+const ImportButton = styled.button`
+  background: #4a90e2;
+  border: none;
+  cursor: pointer;
+  font-size: 13px;
+  padding: 6px 12px;
+  color: white;
+  border-radius: 4px;
+  transition: background 0.2s;
+  font-weight: 500;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+
+  &:hover {
+    background: #357abd;
+  }
+`;
+
 const MinimizeButton = styled.button`
   background: none;
   border: none;
@@ -35,6 +60,10 @@ const MinimizeButton = styled.button`
   &:hover {
     color: #333;
   }
+`;
+
+const HiddenFileInput = styled.input`
+  display: none;
 `;
 
 const TextArea = styled.textarea`
@@ -66,6 +95,7 @@ interface MarkdownInputProps {
   isMinimized: boolean;
   onToggleMinimize: () => void;
   hasContent: boolean;
+  onImport: (file: File) => void;
 }
 
 export const MarkdownInput: React.FC<MarkdownInputProps> = ({
@@ -74,17 +104,45 @@ export const MarkdownInput: React.FC<MarkdownInputProps> = ({
   isMinimized,
   onToggleMinimize,
   hasContent,
+  onImport,
 }) => {
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  const handleImportClick = () => {
+    fileInputRef.current?.click();
+  };
+
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      onImport(file);
+    }
+    // Reset input so the same file can be selected again
+    e.target.value = '';
+  };
+
   return (
     <Container $isMinimized={isMinimized}>
       <Header>
         <Title>Markdown Input</Title>
-        {hasContent && (
-          <MinimizeButton onClick={onToggleMinimize}>
-            {isMinimized ? '▼' : '▲'}
-          </MinimizeButton>
-        )}
+        <ButtonGroup>
+          <ImportButton onClick={handleImportClick}>
+            <span className="material-symbols-outlined" style={{ fontSize: '18px' }}>file_open</span>
+            <span style={{ marginLeft: '4px' }}>Import</span>
+          </ImportButton>
+          {hasContent && (
+            <MinimizeButton onClick={onToggleMinimize}>
+              {isMinimized ? '▼' : '▲'}
+            </MinimizeButton>
+          )}
+        </ButtonGroup>
       </Header>
+      <HiddenFileInput
+        ref={fileInputRef}
+        type="file"
+        accept=".md,.txt"
+        onChange={handleFileChange}
+      />
       {!isMinimized && (
         <>
           <TextArea

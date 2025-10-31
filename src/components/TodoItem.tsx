@@ -1,4 +1,5 @@
-import React, { useState, KeyboardEvent } from 'react';
+import React, { useState } from 'react';
+import type { KeyboardEvent } from 'react';
 import styled from 'styled-components';
 import type { Task } from '../types/Task';
 
@@ -355,11 +356,11 @@ export const TodoItem: React.FC<TodoItemProps> = ({
                   console.log('Checkbox onChange!', task.id, 'current:', task.completed);
                   onToggle(task.id);
                 }}
-                onMouseDown={(e) => {
-                  e.stopPropagation();
+                onMouseDown={(_e) => {
+                  _e.stopPropagation();
                   console.log('Checkbox mousedown!');
                 }}
-                onClick={(e) => {
+                onClick={(_e) => {
                   console.log('Checkbox click!');
                 }}
               />
@@ -387,19 +388,19 @@ export const TodoItem: React.FC<TodoItemProps> = ({
             {task.isHeader ? (
               <>
                 <ActionButton onClick={() => onAddSubtask(task.id)}>
-                  + Add Task
+                  <span className="material-symbols-outlined" style={{ fontSize: '18px' }}>playlist_add</span>
                 </ActionButton>
                 <DeleteButton onClick={() => onDelete(task.id)}>
-                  Delete
+                  <span className="material-symbols-outlined" style={{ fontSize: '18px' }}>delete</span>
                 </DeleteButton>
               </>
             ) : (
               <>
                 <ActionButton onClick={() => onAddSubtask(task.id)}>
-                  + Sub
+                  <span className="material-symbols-outlined" style={{ fontSize: '18px' }}>playlist_add</span>
                 </ActionButton>
                 <DeleteButton onClick={() => onDelete(task.id)}>
-                  Delete
+                  <span className="material-symbols-outlined" style={{ fontSize: '18px' }}>delete</span>
                 </DeleteButton>
               </>
             )}
