@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import type { KeyboardEvent } from 'react';
 import styled from 'styled-components';
 import type { Task } from '../types/Task';
+import { linkifyText } from '../utils/linkify';
 
 const ItemContainer = styled.div<{ $level: number; $isDragging?: boolean; $isDropTarget?: boolean }>`
   margin-left: ${props => props.$level * 24}px;
@@ -385,7 +386,7 @@ export const TodoItem: React.FC<TodoItemProps> = ({
               $isDragging={isDragging}
               onClick={() => setIsEditing(true)}
             >
-              {task.text}
+              {linkifyText(task.text)}
             </TextDisplay>
           )}
           <ButtonGroup $isHeader={task.isHeader}>
