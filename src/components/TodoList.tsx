@@ -3,6 +3,7 @@ import styled from 'styled-components';
 import type { Task } from '../types/Task';
 import { TodoItem } from './TodoItem';
 import { AddTasksModal } from './AddTasksModal';
+import { QuickTaskInput } from './QuickTaskInput';
 
 const Container = styled.div`
   background: white;
@@ -337,31 +338,40 @@ const MenuItem = styled.button`
   }
 `;
 
-const SearchInput = styled.input`
-  width: 100%;
-  padding: 10px 12px;
-  border: 2px solid #e0e0e0;
-  border-radius: 6px;
-  font-size: 14px;
-  margin-bottom: 20px;
-  transition: border-color 0.2s;
-
-  &:focus {
-    outline: none;
-    border-color: #4a90e2;
-  }
-
-  &::placeholder {
-    color: #999;
-  }
-`;
-
 const SearchResultInfo = styled.div`
   text-align: center;
   padding: 20px;
   color: #666;
   font-size: 14px;
   font-style: italic;
+`;
+
+const SearchContainer = styled.div<{ $isOpen: boolean }>`
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  overflow: hidden;
+  max-width: ${props => props.$isOpen ? '300px' : '0px'};
+  opacity: ${props => props.$isOpen ? '1' : '0'};
+  transition: all 300ms cubic-bezier(0.4, 0.0, 0.2, 1);
+`;
+
+const CompactSearchInput = styled.input`
+  width: 240px;
+  padding: 8px 12px;
+  border: 2px solid #e0e0e0;
+  border-radius: 20px;
+  font-size: 13px;
+  transition: border-color 0.2s;
+
+  &:focus {
+    outline: none;
+    border-color: #6200ee;
+  }
+
+  &::placeholder {
+    color: #999;
+  }
 `;
 
 interface TodoListProps {
@@ -384,6 +394,7 @@ interface TodoListProps {
   onUndo: () => void;
   canUndo: boolean;
   onAddTasksFromMarkdown: (markdown: string, parentId?: string) => void;
+  onQuickAddTask: (text: string) => void;
 }
 
 export const TodoList: React.FC<TodoListProps> = ({
@@ -406,12 +417,14 @@ export const TodoList: React.FC<TodoListProps> = ({
   onUndo,
   canUndo,
   onAddTasksFromMarkdown,
+  onQuickAddTask,
 }) => {
   const [collapsedSections, setCollapsedSections] = useState<Set<string>>(new Set());
   const [isSpeedDialOpen, setIsSpeedDialOpen] = useState(false);
   const [isOverflowOpen, setIsOverflowOpen] = useState(false);
   const [isAddTasksModalOpen, setIsAddTasksModalOpen] = useState(false);
   const [addTasksTargetId, setAddTasksTargetId] = useState<string | undefined>(undefined);
+  const [isSearchOpen, setIsSearchOpen] = useState(false);
 
   const countTasks = (taskList: Task[]): { total: number; completed: number } => {
     let total = 0;
@@ -585,6 +598,7 @@ export const TodoList: React.FC<TodoListProps> = ({
     return (
       <>
         <Container>
+          <QuickTaskInput onAddTask={onQuickAddTask} autoFocus={false} />
           <Header>
             <TitleInput
               value={listName}
@@ -593,16 +607,28 @@ export const TodoList: React.FC<TodoListProps> = ({
             />
             <Stats>0 / 0 completed</Stats>
           </Header>
-          {onSearchChange && (
-            <SearchInput
-              type="text"
-              placeholder="🔍 Search tasks..."
-              value={searchQuery}
-              onChange={(e) => onSearchChange(e.target.value)}
-            />
-          )}
           <MaterialToolbar>
             <ToolbarSection>
+              {onSearchChange && (
+                <>
+                  <IconButton
+                    $active={isSearchOpen}
+                    data-tooltip="Search"
+                    onClick={() => setIsSearchOpen(!isSearchOpen)}
+                  >
+                    <span className="material-symbols-outlined">search</span>
+                  </IconButton>
+                  <SearchContainer $isOpen={isSearchOpen}>
+                    <CompactSearchInput
+                      type="text"
+                      placeholder="Search tasks..."
+                      value={searchQuery}
+                      onChange={(e) => onSearchChange(e.target.value)}
+                      autoFocus={isSearchOpen}
+                    />
+                  </SearchContainer>
+                </>
+              )}
               <IconButton
                 $active={hideCompleted}
                 data-tooltip={hideCompleted ? "Show Completed" : "Hide Completed"}
@@ -705,6 +731,7 @@ export const TodoList: React.FC<TodoListProps> = ({
   return (
     <>
       <Container>
+        <QuickTaskInput onAddTask={onQuickAddTask} autoFocus={false} />
         <Header>
           <TitleInput
             value={listName}
@@ -728,48 +755,60 @@ export const TodoList: React.FC<TodoListProps> = ({
             </ProgressText>
           </ProgressBarContainer>
         )}
-        {onSearchChange && (
-          <SearchInput
-            type="text"
-            placeholder="🔍 Search tasks..."
-            value={searchQuery}
-            onChange={(e) => onSearchChange(e.target.value)}
-          />
-        )}
-        <MaterialToolbar>
-          <ToolbarSection>
-            <IconButton
-              $active={hideCompleted}
-              data-tooltip={hideCompleted ? "Show Completed" : "Hide Completed"}
-              onClick={onToggleHideCompleted}
-            >
-              {hideCompleted ? '👁' : '🙈'}
-            </IconButton>
-            <IconButton
-              data-tooltip="Undo (Cmd+Z)"
-              onClick={onUndo}
-              disabled={!canUndo}
-              style={{ opacity: canUndo ? 1 : 0.3, cursor: canUndo ? 'pointer' : 'not-allowed' }}
-            >
-              <span className="material-symbols-outlined">undo</span>
-            </IconButton>
-            {hasSections && (
-              <>
-                <IconButton
-                  data-tooltip="Collapse All"
-                  onClick={handleCollapseAll}
-                >
-                  <span className="material-symbols-outlined">collapse_all</span>
-                </IconButton>
-                <IconButton
-                  data-tooltip="Expand All"
-                  onClick={handleExpandAll}
-                >
-                  <span className="material-symbols-outlined">expand_all</span>
-                </IconButton>
-              </>
-            )}
-          </ToolbarSection>
+          <MaterialToolbar>
+            <ToolbarSection>
+              {onSearchChange && (
+                <>
+                  <IconButton
+                    $active={isSearchOpen}
+                    data-tooltip="Search"
+                    onClick={() => setIsSearchOpen(!isSearchOpen)}
+                  >
+                    <span className="material-symbols-outlined">search</span>
+                  </IconButton>
+                  <SearchContainer $isOpen={isSearchOpen}>
+                    <CompactSearchInput
+                      type="text"
+                      placeholder="Search tasks..."
+                      value={searchQuery}
+                      onChange={(e) => onSearchChange(e.target.value)}
+                      autoFocus={isSearchOpen}
+                    />
+                  </SearchContainer>
+                </>
+              )}
+              <IconButton
+                $active={hideCompleted}
+                data-tooltip={hideCompleted ? "Show Completed" : "Hide Completed"}
+                onClick={onToggleHideCompleted}
+              >
+                {hideCompleted ? '👁' : '🙈'}
+              </IconButton>
+              <IconButton
+                data-tooltip="Undo (Cmd+Z)"
+                onClick={onUndo}
+                disabled={!canUndo}
+                style={{ opacity: canUndo ? 1 : 0.3, cursor: canUndo ? 'pointer' : 'not-allowed' }}
+              >
+                <span className="material-symbols-outlined">undo</span>
+              </IconButton>
+              {hasSections && (
+                <>
+                  <IconButton
+                    data-tooltip="Collapse All"
+                    onClick={handleCollapseAll}
+                  >
+                    <span className="material-symbols-outlined">collapse_all</span>
+                  </IconButton>
+                  <IconButton
+                    data-tooltip="Expand All"
+                    onClick={handleExpandAll}
+                  >
+                    <span className="material-symbols-outlined">expand_all</span>
+                  </IconButton>
+                </>
+              )}
+            </ToolbarSection>
           <ToolbarSection>
             <OverflowMenuContainer data-overflow>
               <IconButton

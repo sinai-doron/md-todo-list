@@ -748,6 +748,27 @@ function App() {
     updateCurrentListTasks(() => mergedTasks);
   };
 
+  const handleQuickAddTask = (text: string) => {
+    if (!currentListId || !text.trim()) return;
+
+    // Save current state to history before making changes
+    const currentTasks = lists[currentListId].tasks;
+    setTaskHistory(prev => [...prev.slice(-19), { tasks: currentTasks, timestamp: Date.now() }]);
+    setCanUndo(true);
+
+    // Create a new task at the root level
+    const newTask: Task = {
+      id: crypto.randomUUID(),
+      text: text.trim(),
+      completed: false,
+      level: 0,
+      children: [],
+    };
+
+    // Add the task to the list
+    updateCurrentListTasks((prevTasks) => [...prevTasks, newTask]);
+  };
+
   // Filter tasks by search query
   const filterTasksBySearch = (tasks: Task[], query: string): Task[] => {
     if (!query.trim()) return tasks;
@@ -825,6 +846,7 @@ function App() {
                   onUndo={handleUndo}
                   canUndo={canUndo}
                   onAddTasksFromMarkdown={handleAddTasksFromMarkdown}
+                  onQuickAddTask={handleQuickAddTask}
                 />
               </>
             )}
