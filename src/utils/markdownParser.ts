@@ -17,7 +17,7 @@ export function parseMarkdownToTasks(markdown: string): Task[] {
     if (headerMatch) {
       const headerLevel = headerMatch[1].length; // 3 for ###, 4 for ####, etc.
       lastHeaderLevel = headerLevel;
-      const level = headerLevel - 3; // ### becomes 0, #### becomes 1, etc.
+      const level = Math.max(0, headerLevel - 3); // ### becomes 0, #### becomes 1, # and ## become 0
       const text = headerMatch[2].replace(/\*\*/g, ''); // Remove bold markers
 
       const task: Task = {
