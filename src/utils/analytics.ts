@@ -276,3 +276,38 @@ export const trackFocusModeTaskCompleted = () => {
     event_category: 'feature',
   });
 };
+
+// Pomodoro Timer
+export const trackPomodoroStarted = (timerType: 'work' | 'shortBreak' | 'longBreak') => {
+  trackEvent('pomodoro_started', {
+    event_category: 'pomodoro',
+    timer_type: timerType,
+  });
+};
+
+export const trackPomodoroPaused = () => {
+  trackEvent('pomodoro_paused', {
+    event_category: 'pomodoro',
+  });
+};
+
+export const trackPomodoroCompleted = (timerType: 'work' | 'shortBreak' | 'longBreak', totalSessions: number) => {
+  trackEvent('pomodoro_completed', {
+    event_category: 'pomodoro',
+    timer_type: timerType,
+    total_sessions: totalSessions,
+  });
+};
+
+export const trackPomodoroSkipped = (timerType: 'work' | 'shortBreak' | 'longBreak') => {
+  trackEvent('pomodoro_skipped', {
+    event_category: 'pomodoro',
+    timer_type: timerType,
+  });
+};
+
+export const trackPomodoroSettingsChanged = () => {
+  trackEvent('pomodoro_settings_changed', {
+    event_category: 'pomodoro',
+  });
+};

@@ -6,6 +6,7 @@ import {
   trackFocusModeExited,
   trackFocusModeTaskCompleted,
 } from '../utils/analytics';
+import { PomodoroTimer } from './PomodoroTimer';
 
 const fadeIn = keyframes`
   from {
@@ -231,6 +232,8 @@ export const FocusMode: React.FC<FocusModeProps> = ({
           <TaskText $completed={task.completed}>
             {task.text}
           </TaskText>
+
+          <PomodoroTimer />
 
           <CheckboxContainer>
             <HiddenCheckbox
