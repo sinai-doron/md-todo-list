@@ -311,3 +311,17 @@ export const trackPomodoroSettingsChanged = () => {
     event_category: 'pomodoro',
   });
 };
+
+// Productivity Dashboard
+export const trackDashboardOpened = () => {
+  trackEvent('dashboard_opened', {
+    event_category: 'dashboard',
+  });
+};
+
+export const trackDashboardViewChanged = (view: '7_days' | '30_days') => {
+  trackEvent('dashboard_view_changed', {
+    event_category: 'dashboard',
+    view,
+  });
+};

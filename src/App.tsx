@@ -6,6 +6,7 @@ import { MarkdownInput } from './components/MarkdownInput';
 import { TodoList } from './components/TodoList';
 import { Sidebar } from './components/Sidebar';
 import { MarkdownVisualizerPage } from './pages/MarkdownVisualizerPage';
+import { ProductivityDashboard } from './components/ProductivityDashboard';
 import type { Task } from './types/Task';
 import type { TodoList as TodoListType } from './types/TodoList';
 import { parseMarkdownToTasks, mergeTasks } from './utils/markdownParser';
@@ -15,6 +16,7 @@ import {
   saveAllLists,
   createNewList,
 } from './utils/storage';
+import { useProductivityStats } from './hooks/useProductivityStats';
 import {
   trackListCreated,
   trackListSwitched,
@@ -89,6 +91,7 @@ const Subtitle = styled.p`
 const HeaderActions = styled.div`
   display: flex;
   justify-content: center;
+  gap: 12px;
   margin-top: 20px;
 `;
 
@@ -220,6 +223,10 @@ function TodoApp() {
   const [currentListId, setCurrentListId] = useState<string | null>(null);
   const [hideCompleted, setHideCompleted] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
+  const [isDashboardOpen, setIsDashboardOpen] = useState(false);
+
+  // Productivity statistics
+  const { stats, recordTaskCompletion, recordTaskUncompletion } = useProductivityStats();
   
   // Undo history state
   const [taskHistory, setTaskHistory] = useState<Array<{ tasks: Task[]; timestamp: number }>>([]);
@@ -465,6 +472,8 @@ function TodoApp() {
   };
 
   const handleToggle = (id: string) => {
+    if (!currentListId) return;
+
     updateCurrentListTasks((prevTasks) => {
       // First, find the task to determine its new completed state
       let newCompletedState = false;
@@ -478,23 +487,32 @@ function TodoApp() {
         }
         return null;
       };
-      
+
       const targetTask = findTask(prevTasks);
       if (targetTask) {
         newCompletedState = !targetTask.completed;
         // Track completion or uncompletion
         if (newCompletedState) {
           trackTaskCompleted();
+          // Record in productivity stats (only for non-header tasks)
+          if (!targetTask.isHeader) {
+            recordTaskCompletion(id, currentListId);
+          }
         } else {
           trackTaskUncompleted();
+          // Record uncompletion in productivity stats
+          if (!targetTask.isHeader) {
+            recordTaskUncompletion(id, currentListId);
+          }
         }
       }
 
       // Helper to mark a task and all its children with the same completed state
       const markTaskAndChildren = (task: Task, completed: boolean): Task => {
-        const updatedTask = { ...task, completed };
+        const completedAt = completed ? Date.now() : undefined;
+        const updatedTask = { ...task, completed, completedAt };
         if (updatedTask.children && updatedTask.children.length > 0) {
-          updatedTask.children = updatedTask.children.map(child => 
+          updatedTask.children = updatedTask.children.map(child =>
             markTaskAndChildren(child, completed)
           );
         }
@@ -934,6 +952,10 @@ function TodoApp() {
           <Title>Markdown Todo List</Title>
           <Subtitle>Transform your markdown into an interactive todo list</Subtitle>
           <HeaderActions>
+            <VisualizerButton onClick={() => setIsDashboardOpen(true)}>
+              <span className="material-symbols-outlined">insights</span>
+              Productivity
+            </VisualizerButton>
             <VisualizerButton
               onClick={() => {
                 trackMarkdownVisualizerOpened();
@@ -1011,6 +1033,14 @@ function TodoApp() {
 
         Image by <span>John Towner</span>
       </Attribution>
+
+      {isDashboardOpen && (
+        <ProductivityDashboard
+          stats={stats}
+          lists={lists}
+          onClose={() => setIsDashboardOpen(false)}
+        />
+      )}
     </AppContainer>
   );
 }

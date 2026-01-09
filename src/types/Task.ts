@@ -6,4 +6,5 @@ export type Task = {
   isHeader?: boolean;
   children?: Task[];
   dueDate?: string; // ISO date string (YYYY-MM-DD)
+  completedAt?: number; // Unix timestamp when task was completed
 };
