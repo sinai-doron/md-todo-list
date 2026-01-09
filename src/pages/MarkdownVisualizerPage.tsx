@@ -4,6 +4,7 @@ import styled from 'styled-components';
 import { useMarkdownFile } from '../hooks/useMarkdownFile';
 import { useEngagementTracking } from '../hooks/useAnalytics';
 import { MarkdownPreview } from '../components/MarkdownPreview';
+import { SEO } from '../components/SEO';
 import { parseMarkdownToTasks } from '../utils/markdownParser';
 import {
   trackMarkdownVisualizerFileUploaded,
@@ -340,6 +341,12 @@ export const MarkdownVisualizerPage: React.FC = () => {
 
   return (
     <PageContainer>
+      <SEO
+        title="MD Files Preview - Markdown Visualizer"
+        description="Preview and visualize markdown files instantly. Upload or paste MD files to see formatted preview with syntax highlighting, tables, and task detection."
+        canonical="/visualizer"
+        keywords="md files preview, markdown preview, md visualizer, markdown viewer, markdown file reader"
+      />
       <Header>
         <HeaderLeft>
           <BackButton onClick={handleBack} title="Back to Todo List (Esc)">

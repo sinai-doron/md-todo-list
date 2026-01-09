@@ -1,0 +1,11 @@
+# robots.txt for https://todo.commandboard.online
+
+User-agent: *
+Allow: /
+Allow: /visualizer
+
+# Sitemap location
+Sitemap: https://todo.commandboard.online/sitemap.xml
+
+# Crawl-delay for politeness
+Crawl-delay: 1

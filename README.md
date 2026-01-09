@@ -1,13 +1,15 @@
-# 📝 Markdown Todo List
+# 📝 MD Tasks - Markdown Todo List
 
 <div align="center">
 
-**A modern, feature-rich React application that transforms markdown into interactive, hierarchical todo lists**
+**A modern, feature-rich React application that transforms markdown into interactive, hierarchical todo lists with productivity tracking**
 
 ![React](https://img.shields.io/badge/React-19.1-61dafb?style=flat&logo=react)
 ![TypeScript](https://img.shields.io/badge/TypeScript-5.9-3178c6?style=flat&logo=typescript)
 ![Vite](https://img.shields.io/badge/Vite-7.1-646cff?style=flat&logo=vite)
 ![Styled Components](https://img.shields.io/badge/Styled%20Components-6.1-db7093?style=flat&logo=styled-components)
+
+🌐 **Live Demo**: [todo.commandboard.online](https://todo.commandboard.online)
 
 </div>
 
@@ -21,6 +23,7 @@
 - **💾 Persistent Storage**: All your lists and tasks are automatically saved to localStorage with debounced saves for optimal performance
 - **🔍 Search**: Quickly find tasks across your entire list with real-time search filtering
 - **📊 Progress Tracking**: See completed vs total tasks at a glance for each list
+- **⚡ Quick Add**: Rapidly add tasks with the quick add input field
 
 ### ✅ Task Management
 - **Interactive Checkboxes**: Toggle task completion status with visual feedback
@@ -31,6 +34,37 @@
 - **🎯 Section Headers**: Create organizational headers (converted from markdown headers)
 - **👁️ Hide Completed**: Toggle visibility of completed tasks to focus on what's left
 
+### 📅 Due Dates
+- **Due Date Picker**: Set due dates for any task with a convenient dropdown
+- **Quick Options**: Today, Tomorrow, Next Week shortcuts
+- **Visual Status**: Color-coded indicators for overdue (red), today (orange), and upcoming (blue) tasks
+- **Smart Sections**: Automatically group tasks by due date status (Overdue, Today, Upcoming)
+- **Summary Bar**: Clickable chips showing counts of overdue, today, and upcoming tasks
+- **Filter by Status**: Click summary chips to filter tasks by due date status
+
+### 🎯 Focus Mode
+- **Distraction-Free View**: Full-screen focus on a single task
+- **Large Task Display**: Task text prominently displayed for clarity
+- **Quick Complete**: Large checkbox for easy task completion
+- **Escape to Exit**: Press Escape or click Exit to return to the main view
+
+### 🍅 Pomodoro Timer
+- **Integrated Timer**: Built into Focus Mode for timed work sessions
+- **Configurable Durations**: Customize work (5-60 min), short break (1-15 min), and long break (5-30 min)
+- **Visual Progress Ring**: Circular SVG progress indicator with color-coded states
+- **Session Tracking**: Track completed pomodoro sessions with visual dots
+- **Auto-Transition**: Automatically switches between work and break periods
+- **Sound Notifications**: Audio chime when timer completes (Web Audio API)
+- **Controls**: Play, Pause, Reset, and Skip buttons
+
+### 📈 Productivity Dashboard
+- **Quick Stats**: View tasks completed today, this week, and current streak
+- **Streak Tracking**: Track consecutive days of task completion with fire icon
+- **Completion Chart**: Visual bar chart showing completion trends (7 or 30 days)
+- **Per-List Rates**: See completion percentage for each todo list
+- **Historical Data**: 90-day rolling window of productivity statistics
+- **Longest Streak**: Track your best productivity streak
+
 ### 🎨 Advanced Features
 - **Drag & Drop**: Reorder tasks by dragging them to new positions with visual drop indicators
   - Drop **before** or **after** sibling tasks
@@ -40,6 +74,7 @@
 - **📤 Export Options**:
   - Copy markdown to clipboard
   - Download as `.md` file
+- **📁 Markdown Visualizer**: Preview and convert any markdown file to tasks
 - **🔽 Minimizable Input**: Collapse the markdown input area after transformation to focus on your tasks
 - **📱 Responsive Design**: Beautiful, modern UI that works seamlessly on desktop and mobile devices
 - **🌲 Aesthetic Background**: Gorgeous forest road background with overlay for better readability
@@ -214,30 +249,54 @@ This markdown will create:
 todo-list/
 ├── public/
 │   ├── forest-road.jpg          # Background image
-│   └── vite.svg                  # Vite logo
+│   ├── favicon.svg              # App favicon
+│   └── manifest.json            # PWA manifest
 │
 ├── src/
 │   ├── components/
-│   │   ├── MarkdownInput.tsx    # Markdown input textarea with minimize button
+│   │   ├── AddTasksModal.tsx    # Modal for bulk adding tasks
+│   │   ├── CompletionChart.tsx  # Bar chart for completion trends
+│   │   ├── DueDatePicker.tsx    # Due date selection dropdown
+│   │   ├── DueDateSummary.tsx   # Summary bar for due date statuses
+│   │   ├── FocusMode.tsx        # Full-screen focus view
+│   │   ├── ListCompletionRates.tsx  # Per-list completion stats
+│   │   ├── MarkdownInput.tsx    # Markdown input textarea
+│   │   ├── PomodoroSettings.tsx # Timer settings modal
+│   │   ├── PomodoroTimer.tsx    # Pomodoro timer component
+│   │   ├── ProductivityDashboard.tsx  # Stats dashboard modal
+│   │   ├── QuickStats.tsx       # Quick stat cards
+│   │   ├── SEO.tsx              # SEO meta tags component
 │   │   ├── Sidebar.tsx          # Multi-list sidebar navigation
-│   │   ├── TodoItem.tsx         # Individual task with drag-drop and actions
+│   │   ├── TodoItem.tsx         # Individual task with drag-drop
 │   │   └── TodoList.tsx         # Task list container with toolbar
 │   │
+│   ├── hooks/
+│   │   ├── useAnalytics.ts      # Analytics hook
+│   │   ├── usePomodoroTimer.ts  # Pomodoro timer state management
+│   │   └── useProductivityStats.ts  # Productivity stats hook
+│   │
+│   ├── pages/
+│   │   └── MarkdownVisualizerPage.tsx  # Markdown file preview page
+│   │
 │   ├── types/
-│   │   ├── Task.ts              # Task interface with hierarchy support
+│   │   ├── Statistics.ts        # Productivity statistics types
+│   │   ├── Task.ts              # Task interface with hierarchy
 │   │   └── TodoList.ts          # TodoList and StorageData interfaces
 │   │
 │   ├── utils/
-│   │   ├── analytics.ts         # Google Analytics tracking utilities
+│   │   ├── analytics.ts         # Google Analytics tracking
 │   │   ├── exportMarkdown.ts    # Tasks → Markdown conversion
 │   │   ├── linkify.tsx          # URL detection and linkification
-│   │   ├── markdownParser.ts    # Markdown → Tasks parsing logic
+│   │   ├── markdownParser.ts    # Markdown → Tasks parsing
+│   │   ├── statisticsStorage.ts # Productivity stats persistence
 │   │   └── storage.ts           # localStorage operations
 │   │
-│   ├── App.tsx                  # Main app component with state management
+│   ├── App.tsx                  # Main app with routing
 │   ├── main.tsx                 # Application entry point
 │   └── index.css                # Global styles and CSS resets
 │
+├── Dockerfile                   # Container configuration
+├── cloudbuild.yaml              # Google Cloud Build config
 ├── eslint.config.js             # ESLint configuration
 ├── tsconfig.json                # TypeScript configuration
 ├── vite.config.ts               # Vite build configuration
@@ -395,13 +454,15 @@ The project uses ESLint v9 with flat config format:
    - Parsed as completed/uncompleted state
 
 ### Storage Schema
+
+**Tasks Storage** (`markdown-todo-app-state`):
 ```typescript
 {
   lists: {
     [listId]: {
       id: string;
       name: string;
-      tasks: Task[];
+      tasks: Task[];        // Each task has: id, text, completed, level, children?, dueDate?, completedAt?
       markdown: string;
       isMinimized: boolean;
       createdAt: number;
@@ -409,6 +470,27 @@ The project uses ESLint v9 with flat config format:
     }
   };
   currentListId: string | null;
+}
+```
+
+**Productivity Statistics** (`markdown-todo-app-stats`):
+```typescript
+{
+  dailyHistory: DailyStats[];   // Last 90 days: { date, completedCount, taskIds }
+  listStats: { [listId]: ListStats };
+  currentStreak: number;
+  longestStreak: number;
+  lastActiveDate: string | null;
+}
+```
+
+**Pomodoro Settings** (`pomodoro-settings`):
+```typescript
+{
+  workDuration: number;           // minutes (default: 25)
+  shortBreakDuration: number;     // minutes (default: 5)
+  longBreakDuration: number;      // minutes (default: 15)
+  sessionsBeforeLongBreak: number; // default: 4
 }
 ```
 
@@ -518,14 +600,20 @@ Contributions are welcome! Here are some ideas:
 - [ ] Collaborative editing
 - [ ] Markdown rendering in tasks (bold, italic, links)
 - [ ] Tags and filters
-- [ ] Due dates and reminders
-- [ ] Import from .md files
 - [ ] Dark mode
-- [ ] Keyboard shortcuts (Ctrl+Enter, Ctrl+Z, etc.)
 - [ ] Task templates
 - [ ] Priority levels
 - [ ] Recurring tasks
-- [ ] Time tracking
+- [ ] Notifications/Reminders
+
+### Recently Implemented
+- [x] Due dates with visual indicators
+- [x] Import from .md files (Markdown Visualizer)
+- [x] Focus Mode
+- [x] Pomodoro Timer
+- [x] Productivity Dashboard with statistics
+- [x] Streak tracking
+- [x] Quick add tasks
 
 ### Development Process
 1. Fork the repository

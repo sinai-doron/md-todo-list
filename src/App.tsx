@@ -7,6 +7,7 @@ import { TodoList } from './components/TodoList';
 import { Sidebar } from './components/Sidebar';
 import { MarkdownVisualizerPage } from './pages/MarkdownVisualizerPage';
 import { ProductivityDashboard } from './components/ProductivityDashboard';
+import { SEO } from './components/SEO';
 import type { Task } from './types/Task';
 import type { TodoList as TodoListType } from './types/TodoList';
 import { parseMarkdownToTasks, mergeTasks } from './utils/markdownParser';
@@ -947,6 +948,12 @@ function TodoApp() {
 
   return (
     <AppContainer>
+      <SEO
+        title="MD Tasks - Markdown Todo List Manager"
+        description="Create and manage interactive task lists from markdown files. Convert MD files to todos, track progress, and boost productivity with our free online tool."
+        canonical="/"
+        keywords="md tasks, markdown todo list, task manager, markdown tasks, productivity tool"
+      />
       <MainWrapper>
         <Header>
           <Title>Markdown Todo List</Title>
