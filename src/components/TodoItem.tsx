@@ -4,6 +4,7 @@ import styled from 'styled-components';
 import type { Task } from '../types/Task';
 import { linkifyText } from '../utils/linkify';
 import { exportSingleTaskToMarkdown } from '../utils/exportMarkdown';
+import { DueDatePicker } from './DueDatePicker';
 
 const ItemContainer = styled.div<{ $level: number; $isDragging?: boolean; $isDropTarget?: boolean }>`
   margin-left: ${props => props.$level * 24}px;
@@ -228,6 +229,7 @@ interface TodoItemProps {
   collapsedSections?: Set<string>;
   onAddTasksFromMarkdown?: (parentId: string) => void;
   onFocus?: (id: string) => void;
+  onUpdateDueDate?: (id: string, dueDate: string | undefined) => void;
 }
 
 export const TodoItem: React.FC<TodoItemProps> = ({
@@ -242,6 +244,7 @@ export const TodoItem: React.FC<TodoItemProps> = ({
   collapsedSections,
   onAddTasksFromMarkdown,
   onFocus,
+  onUpdateDueDate,
 }) => {
   const [isEditing, setIsEditing] = useState(false);
   const [editText, setEditText] = useState(task.text);
@@ -415,6 +418,13 @@ export const TodoItem: React.FC<TodoItemProps> = ({
               {linkifyText(task.text)}
             </TextDisplay>
           )}
+          {!task.isHeader && onUpdateDueDate && (
+            <DueDatePicker
+              dueDate={task.dueDate}
+              onChange={(date) => onUpdateDueDate(task.id, date)}
+              disabled={task.completed}
+            />
+          )}
           <ButtonGroup $isHeader={task.isHeader}>
             {task.isHeader ? (
               <>
@@ -485,6 +495,7 @@ export const TodoItem: React.FC<TodoItemProps> = ({
           collapsedSections={collapsedSections}
           onAddTasksFromMarkdown={onAddTasksFromMarkdown}
           onFocus={onFocus}
+          onUpdateDueDate={onUpdateDueDate}
         />
       ))}
     </>

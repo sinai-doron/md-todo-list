@@ -5,6 +5,8 @@ import { TodoItem } from './TodoItem';
 import { AddTasksModal } from './AddTasksModal';
 import { QuickTaskInput } from './QuickTaskInput';
 import { FocusMode } from './FocusMode';
+import { DueDateSummary, type DueDateFilter } from './DueDateSummary';
+import { getDateStatus } from './DueDatePicker';
 
 const Container = styled.div`
   background: white;
@@ -375,6 +377,37 @@ const CompactSearchInput = styled.input`
   }
 `;
 
+// Smart Section Headers for due date grouping
+const SectionHeader = styled.div<{ $color: string }>`
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 12px 16px;
+  margin: 16px 0 8px 0;
+  background: ${props => `${props.$color}10`};
+  border-left: 4px solid ${props => props.$color};
+  border-radius: 0 8px 8px 0;
+  font-weight: 600;
+  font-size: 14px;
+  color: ${props => props.$color};
+
+  .material-symbols-outlined {
+    font-size: 18px;
+  }
+
+  .count {
+    background: ${props => `${props.$color}20`};
+    padding: 2px 8px;
+    border-radius: 10px;
+    font-size: 12px;
+    margin-left: auto;
+  }
+`;
+
+const GroupedTasksContainer = styled.div`
+  margin-bottom: 8px;
+`;
+
 interface TodoListProps {
   tasks: Task[];
   listName: string;
@@ -396,6 +429,7 @@ interface TodoListProps {
   canUndo: boolean;
   onAddTasksFromMarkdown: (markdown: string, parentId?: string) => void;
   onQuickAddTask: (text: string) => void;
+  onUpdateDueDate: (id: string, dueDate: string | undefined) => void;
 }
 
 export const TodoList: React.FC<TodoListProps> = ({
@@ -419,6 +453,7 @@ export const TodoList: React.FC<TodoListProps> = ({
   canUndo,
   onAddTasksFromMarkdown,
   onQuickAddTask,
+  onUpdateDueDate,
 }) => {
   const [collapsedSections, setCollapsedSections] = useState<Set<string>>(new Set());
   const [isSpeedDialOpen, setIsSpeedDialOpen] = useState(false);
@@ -427,6 +462,7 @@ export const TodoList: React.FC<TodoListProps> = ({
   const [addTasksTargetId, setAddTasksTargetId] = useState<string | undefined>(undefined);
   const [isSearchOpen, setIsSearchOpen] = useState(false);
   const [focusedTaskId, setFocusedTaskId] = useState<string | null>(null);
+  const [dueDateFilter, setDueDateFilter] = useState<DueDateFilter>(null);
 
   const countTasks = (taskList: Task[]): { total: number; completed: number } => {
     let total = 0;
@@ -454,7 +490,7 @@ export const TodoList: React.FC<TodoListProps> = ({
       .filter(task => {
         // Keep headers if they have non-completed children
         if (task.isHeader) {
-          return task.children && task.children.length > 0 && 
+          return task.children && task.children.length > 0 &&
                  filterCompletedTasks(task.children).length > 0;
         }
         // Filter out completed tasks
@@ -466,8 +502,109 @@ export const TodoList: React.FC<TodoListProps> = ({
       }));
   };
 
+  // Filter tasks by due date status
+  const filterByDueDate = (taskList: Task[]): Task[] => {
+    if (!dueDateFilter) return taskList;
+
+    const matchesFilter = (task: Task): boolean => {
+      if (!task.dueDate) return false;
+      const status = getDateStatus(task.dueDate);
+      return status === dueDateFilter;
+    };
+
+    const filterRecursive = (tasks: Task[]): Task[] => {
+      return tasks
+        .filter(task => {
+          if (task.isHeader) {
+            // Keep headers if they have matching children
+            const filteredChildren = task.children ? filterRecursive(task.children) : [];
+            return filteredChildren.length > 0;
+          }
+          // Check if task matches or has matching children
+          const hasMatchingChildren = task.children ? filterRecursive(task.children).length > 0 : false;
+          return matchesFilter(task) || hasMatchingChildren;
+        })
+        .map(task => ({
+          ...task,
+          children: task.children ? filterRecursive(task.children) : undefined,
+        }));
+    };
+
+    return filterRecursive(taskList);
+  };
+
+  // Group tasks by due date for smart sections
+  type GroupedTasks = {
+    overdue: Task[];
+    today: Task[];
+    tomorrow: Task[];
+    thisWeek: Task[];
+    later: Task[];
+    noDueDate: Task[];
+  };
+
+  const groupTasksByDueDate = (taskList: Task[]): GroupedTasks => {
+    const groups: GroupedTasks = {
+      overdue: [],
+      today: [],
+      tomorrow: [],
+      thisWeek: [],
+      later: [],
+      noDueDate: [],
+    };
+
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const tomorrow = new Date(today);
+    tomorrow.setDate(tomorrow.getDate() + 1);
+    const nextWeek = new Date(today);
+    nextWeek.setDate(nextWeek.getDate() + 7);
+
+    // Flatten all non-header tasks for grouping
+    const flattenTasks = (tasks: Task[]): Task[] => {
+      const result: Task[] = [];
+      for (const task of tasks) {
+        if (!task.isHeader) {
+          result.push(task);
+        }
+        if (task.children) {
+          result.push(...flattenTasks(task.children));
+        }
+      }
+      return result;
+    };
+
+    const allTasks = flattenTasks(taskList);
+
+    for (const task of allTasks) {
+      if (!task.dueDate) {
+        groups.noDueDate.push(task);
+        continue;
+      }
+
+      const dueDate = new Date(task.dueDate + 'T00:00:00');
+      const status = getDateStatus(task.dueDate);
+
+      if (status === 'overdue') {
+        groups.overdue.push(task);
+      } else if (dueDate.getTime() === today.getTime()) {
+        groups.today.push(task);
+      } else if (dueDate.getTime() === tomorrow.getTime()) {
+        groups.tomorrow.push(task);
+      } else if (dueDate < nextWeek) {
+        groups.thisWeek.push(task);
+      } else {
+        groups.later.push(task);
+      }
+    }
+
+    return groups;
+  };
+
   const { total, completed } = countTasks(tasks);
-  const displayedTasks = filterCompletedTasks(tasks);
+  const filteredByCompleted = filterCompletedTasks(tasks);
+  const displayedTasks = filterByDueDate(filteredByCompleted);
+  const groupedTasks = dueDateFilter ? groupTasksByDueDate(displayedTasks) : null;
   const hasSearchQuery = searchQuery.trim().length > 0;
   const completionPercentage = total > 0 ? Math.round((completed / total) * 100) : 0;
 
@@ -614,6 +751,7 @@ export const TodoList: React.FC<TodoListProps> = ({
       onToggleCollapse={toggleSectionCollapse}
       collapsedSections={collapsedSections}
       onAddTasksFromMarkdown={handleOpenAddTasksModal}
+      onUpdateDueDate={onUpdateDueDate}
     />
   );
 
@@ -784,6 +922,11 @@ export const TodoList: React.FC<TodoListProps> = ({
             </ProgressText>
           </ProgressBarContainer>
         )}
+        <DueDateSummary
+          tasks={tasks}
+          activeFilter={dueDateFilter}
+          onFilterChange={setDueDateFilter}
+        />
           <MaterialToolbar>
             <ToolbarSection>
               {onSearchChange && (
@@ -867,6 +1010,64 @@ export const TodoList: React.FC<TodoListProps> = ({
           <EmptyState>
             All tasks are completed! Toggle "Show Completed" to see them.
           </EmptyState>
+        ) : displayedTasks.length === 0 && dueDateFilter ? (
+          <EmptyState>
+            No tasks with this due date status.
+          </EmptyState>
+        ) : groupedTasks ? (
+          // Render grouped tasks when due date filter is active
+          <>
+            {groupedTasks.overdue.length > 0 && (
+              <GroupedTasksContainer>
+                <SectionHeader $color="#dc2626">
+                  <span className="material-symbols-outlined">warning</span>
+                  Overdue
+                  <span className="count">{groupedTasks.overdue.length}</span>
+                </SectionHeader>
+                {groupedTasks.overdue.map(renderTask)}
+              </GroupedTasksContainer>
+            )}
+            {groupedTasks.today.length > 0 && (
+              <GroupedTasksContainer>
+                <SectionHeader $color="#d97706">
+                  <span className="material-symbols-outlined">today</span>
+                  Today
+                  <span className="count">{groupedTasks.today.length}</span>
+                </SectionHeader>
+                {groupedTasks.today.map(renderTask)}
+              </GroupedTasksContainer>
+            )}
+            {groupedTasks.tomorrow.length > 0 && (
+              <GroupedTasksContainer>
+                <SectionHeader $color="#2563eb">
+                  <span className="material-symbols-outlined">event</span>
+                  Tomorrow
+                  <span className="count">{groupedTasks.tomorrow.length}</span>
+                </SectionHeader>
+                {groupedTasks.tomorrow.map(renderTask)}
+              </GroupedTasksContainer>
+            )}
+            {groupedTasks.thisWeek.length > 0 && (
+              <GroupedTasksContainer>
+                <SectionHeader $color="#2563eb">
+                  <span className="material-symbols-outlined">date_range</span>
+                  This Week
+                  <span className="count">{groupedTasks.thisWeek.length}</span>
+                </SectionHeader>
+                {groupedTasks.thisWeek.map(renderTask)}
+              </GroupedTasksContainer>
+            )}
+            {groupedTasks.later.length > 0 && (
+              <GroupedTasksContainer>
+                <SectionHeader $color="#6b7280">
+                  <span className="material-symbols-outlined">schedule</span>
+                  Later
+                  <span className="count">{groupedTasks.later.length}</span>
+                </SectionHeader>
+                {groupedTasks.later.map(renderTask)}
+              </GroupedTasksContainer>
+            )}
+          </>
         ) : (
           displayedTasks.map(renderTask)
         )}

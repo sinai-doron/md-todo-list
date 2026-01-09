@@ -5,4 +5,5 @@ export type Task = {
   level: number;
   isHeader?: boolean;
   children?: Task[];
+  dueDate?: string; // ISO date string (YYYY-MM-DD)
 };

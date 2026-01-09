@@ -872,6 +872,16 @@ function TodoApp() {
     updateCurrentListTasks((prevTasks) => [...prevTasks, newTask]);
   };
 
+  const handleUpdateDueDate = (id: string, dueDate: string | undefined) => {
+    trackTaskUpdated();
+
+    updateCurrentListTasks((prevTasks) =>
+      updateTasksRecursively(prevTasks, (task) =>
+        task.id === id ? { ...task, dueDate } : task
+      )
+    );
+  };
+
   // Filter tasks by search query
   const filterTasksBySearch = (tasks: Task[], query: string): Task[] => {
     if (!query.trim()) return tasks;
@@ -975,6 +985,7 @@ function TodoApp() {
                   canUndo={canUndo}
                   onAddTasksFromMarkdown={handleAddTasksFromMarkdown}
                   onQuickAddTask={handleQuickAddTask}
+                  onUpdateDueDate={handleUpdateDueDate}
                 />
               </>
             )}
