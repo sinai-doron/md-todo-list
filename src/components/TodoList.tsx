@@ -4,6 +4,7 @@ import type { Task } from '../types/Task';
 import { TodoItem } from './TodoItem';
 import { AddTasksModal } from './AddTasksModal';
 import { QuickTaskInput } from './QuickTaskInput';
+import { FocusMode } from './FocusMode';
 
 const Container = styled.div`
   background: white;
@@ -425,6 +426,7 @@ export const TodoList: React.FC<TodoListProps> = ({
   const [isAddTasksModalOpen, setIsAddTasksModalOpen] = useState(false);
   const [addTasksTargetId, setAddTasksTargetId] = useState<string | undefined>(undefined);
   const [isSearchOpen, setIsSearchOpen] = useState(false);
+  const [focusedTaskId, setFocusedTaskId] = useState<string | null>(null);
 
   const countTasks = (taskList: Task[]): { total: number; completed: number } => {
     let total = 0;
@@ -577,6 +579,26 @@ export const TodoList: React.FC<TodoListProps> = ({
     return task?.text;
   };
 
+  // Helper to find a task by ID
+  const getTaskById = (taskId: string | null): Task | null => {
+    if (!taskId) return null;
+
+    const findTask = (taskList: Task[]): Task | null => {
+      for (const task of taskList) {
+        if (task.id === taskId) return task;
+        if (task.children) {
+          const found = findTask(task.children);
+          if (found) return found;
+        }
+      }
+      return null;
+    };
+
+    return findTask(tasks);
+  };
+
+  const focusedTask = getTaskById(focusedTaskId);
+
   // Recursive render function to properly handle collapsed state at all levels
   const renderTask = (task: Task): React.ReactNode => (
     <TodoItem
@@ -587,6 +609,7 @@ export const TodoList: React.FC<TodoListProps> = ({
       onDelete={onDelete}
       onAddSubtask={onAddSubtask}
       onMoveTask={onMoveTask}
+      onFocus={setFocusedTaskId}
       isCollapsed={collapsedSections.has(task.id)}
       onToggleCollapse={toggleSectionCollapse}
       collapsedSections={collapsedSections}
@@ -723,6 +746,12 @@ export const TodoList: React.FC<TodoListProps> = ({
           onClose={handleCloseAddTasksModal}
           onAdd={handleAddTasks}
           targetName={getTaskNameById(addTasksTargetId)}
+        />
+        <FocusMode
+          task={focusedTask}
+          isOpen={focusedTaskId !== null}
+          onClose={() => setFocusedTaskId(null)}
+          onToggle={onToggle}
         />
       </>
     );
@@ -879,6 +908,12 @@ export const TodoList: React.FC<TodoListProps> = ({
         onClose={handleCloseAddTasksModal}
         onAdd={handleAddTasks}
         targetName={getTaskNameById(addTasksTargetId)}
+      />
+      <FocusMode
+        task={focusedTask}
+        isOpen={focusedTaskId !== null}
+        onClose={() => setFocusedTaskId(null)}
+        onToggle={onToggle}
       />
     </>
   );

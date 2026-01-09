@@ -15,9 +15,13 @@ declare global {
 }
 
 /**
- * Check if Google Analytics is initialized
+ * Check if Google Analytics is initialized and we're in production
  */
 export const isGAInitialized = (): boolean => {
+  // Skip tracking in development mode
+  if (import.meta.env.DEV) {
+    return false;
+  }
   return typeof window !== 'undefined' && typeof window.gtag === 'function';
 };
 
@@ -250,5 +254,25 @@ export const trackFeatureUsage = (featureName: string, action: string) => {
     event_category: 'feature',
     feature_name: featureName,
     action,
+  });
+};
+
+// Focus Mode
+export const trackFocusModeEntered = () => {
+  trackEvent('focus_mode_entered', {
+    event_category: 'feature',
+  });
+};
+
+export const trackFocusModeExited = (timeSpentSeconds: number) => {
+  trackEvent('focus_mode_exited', {
+    event_category: 'feature',
+    time_spent_seconds: timeSpentSeconds,
+  });
+};
+
+export const trackFocusModeTaskCompleted = () => {
+  trackEvent('focus_mode_task_completed', {
+    event_category: 'feature',
   });
 };

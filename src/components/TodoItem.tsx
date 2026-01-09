@@ -227,6 +227,7 @@ interface TodoItemProps {
   onToggleCollapse?: (id: string) => void;
   collapsedSections?: Set<string>;
   onAddTasksFromMarkdown?: (parentId: string) => void;
+  onFocus?: (id: string) => void;
 }
 
 export const TodoItem: React.FC<TodoItemProps> = ({
@@ -240,6 +241,7 @@ export const TodoItem: React.FC<TodoItemProps> = ({
   onToggleCollapse,
   collapsedSections,
   onAddTasksFromMarkdown,
+  onFocus,
 }) => {
   const [isEditing, setIsEditing] = useState(false);
   const [editText, setEditText] = useState(task.text);
@@ -447,8 +449,8 @@ export const TodoItem: React.FC<TodoItemProps> = ({
                     <span className="material-symbols-outlined" style={{ fontSize: '18px' }}>upload_file</span>
                   </ActionButton>
                 )}
-                <ActionButton 
-                  onClick={handleCopyToClipboard} 
+                <ActionButton
+                  onClick={handleCopyToClipboard}
                   title={showCopyFeedback ? "Copied!" : "Copy task to clipboard"}
                   $showFeedback={showCopyFeedback}
                 >
@@ -456,6 +458,11 @@ export const TodoItem: React.FC<TodoItemProps> = ({
                     {showCopyFeedback ? 'check' : 'content_copy'}
                   </span>
                 </ActionButton>
+                {onFocus && (
+                  <ActionButton onClick={() => onFocus(task.id)} title="Focus on this task">
+                    <span className="material-symbols-outlined" style={{ fontSize: '18px' }}>center_focus_strong</span>
+                  </ActionButton>
+                )}
                 <DeleteButton onClick={() => onDelete(task.id)}>
                   <span className="material-symbols-outlined" style={{ fontSize: '18px' }}>delete</span>
                 </DeleteButton>
@@ -477,6 +484,7 @@ export const TodoItem: React.FC<TodoItemProps> = ({
           onToggleCollapse={onToggleCollapse}
           collapsedSections={collapsedSections}
           onAddTasksFromMarkdown={onAddTasksFromMarkdown}
+          onFocus={onFocus}
         />
       ))}
     </>
