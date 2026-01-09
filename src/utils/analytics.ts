@@ -214,3 +214,41 @@ export const trackMarkdownVisualizerConvertedToTasks = (taskCount: number) => {
     task_count: taskCount,
   });
 };
+
+// Page View Tracking
+export const trackPageView = (pagePath: string, pageTitle: string) => {
+  if (!isGAInitialized()) return;
+
+  try {
+    window.gtag!('event', 'page_view', {
+      page_path: pagePath,
+      page_title: pageTitle,
+    });
+  } catch (error) {
+    console.error('Error tracking page view:', error);
+  }
+};
+
+// Engagement & Session Tracking
+export const trackEngagement = (engagementType: 'scroll' | 'time_on_page' | 'interaction', details?: Record<string, unknown>) => {
+  trackEvent('user_engagement', {
+    event_category: 'engagement',
+    engagement_type: engagementType,
+    ...details,
+  });
+};
+
+export const trackSessionStart = () => {
+  trackEvent('session_start', {
+    event_category: 'session',
+    timestamp: new Date().toISOString(),
+  });
+};
+
+export const trackFeatureUsage = (featureName: string, action: string) => {
+  trackEvent('feature_usage', {
+    event_category: 'feature',
+    feature_name: featureName,
+    action,
+  });
+};

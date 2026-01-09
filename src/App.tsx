@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
 import { BrowserRouter, Routes, Route, useNavigate } from 'react-router-dom';
+import { usePageTracking } from './hooks/useAnalytics';
 import styled from 'styled-components';
 import { MarkdownInput } from './components/MarkdownInput';
 import { TodoList } from './components/TodoList';
@@ -1003,13 +1004,21 @@ function TodoApp() {
   );
 }
 
+function AppRoutes() {
+  usePageTracking();
+
+  return (
+    <Routes>
+      <Route path="/" element={<TodoApp />} />
+      <Route path="/visualizer" element={<MarkdownVisualizerPage />} />
+    </Routes>
+  );
+}
+
 function App() {
   return (
     <BrowserRouter>
-      <Routes>
-        <Route path="/" element={<TodoApp />} />
-        <Route path="/visualizer" element={<MarkdownVisualizerPage />} />
-      </Routes>
+      <AppRoutes />
     </BrowserRouter>
   );
 }

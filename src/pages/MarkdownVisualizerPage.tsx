@@ -2,6 +2,7 @@ import React, { useRef, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import styled from 'styled-components';
 import { useMarkdownFile } from '../hooks/useMarkdownFile';
+import { useEngagementTracking } from '../hooks/useAnalytics';
 import { MarkdownPreview } from '../components/MarkdownPreview';
 import { parseMarkdownToTasks } from '../utils/markdownParser';
 import {
@@ -264,6 +265,8 @@ const PreviewPane = styled.div`
 
 export const MarkdownVisualizerPage: React.FC = () => {
   const navigate = useNavigate();
+  useEngagementTracking('markdown_visualizer');
+
   const {
     content,
     setContent,
