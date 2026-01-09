@@ -1,8 +1,10 @@
 import { useState, useEffect, useRef } from 'react';
+import { BrowserRouter, Routes, Route, useNavigate } from 'react-router-dom';
 import styled from 'styled-components';
 import { MarkdownInput } from './components/MarkdownInput';
 import { TodoList } from './components/TodoList';
 import { Sidebar } from './components/Sidebar';
+import { MarkdownVisualizerPage } from './pages/MarkdownVisualizerPage';
 import type { Task } from './types/Task';
 import type { TodoList as TodoListType } from './types/TodoList';
 import { parseMarkdownToTasks, mergeTasks } from './utils/markdownParser';
@@ -12,6 +14,29 @@ import {
   saveAllLists,
   createNewList,
 } from './utils/storage';
+import {
+  trackListCreated,
+  trackListSwitched,
+  trackListDeleted,
+  trackListRenamed,
+  trackTaskCompleted,
+  trackTaskUncompleted,
+  trackTaskUpdated,
+  trackTaskDeleted,
+  trackSubtaskAdded,
+  trackTaskCreated,
+  trackSectionAdded,
+  trackTaskMoved,
+  trackUndoAction,
+  trackMarkdownExported,
+  trackMarkdownDownloaded,
+  trackMarkdownImported,
+  trackBulkTasksAdded,
+  trackEditorToggled,
+  trackHideCompletedToggled,
+  trackSearchUsed,
+  trackMarkdownVisualizerOpened,
+} from './utils/analytics';
 
 const AppContainer = styled.div`
   min-height: 100vh;
@@ -58,6 +83,43 @@ const Subtitle = styled.p`
   margin: 0;
   font-size: 16px;
   opacity: 0.9;
+`;
+
+const HeaderActions = styled.div`
+  display: flex;
+  justify-content: center;
+  margin-top: 20px;
+`;
+
+const VisualizerButton = styled.button`
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: rgba(255, 255, 255, 0.15);
+  backdrop-filter: blur(8px);
+  color: white;
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  padding: 12px 24px;
+  border-radius: 8px;
+  font-size: 15px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s ease;
+
+  &:hover {
+    background: rgba(255, 255, 255, 0.25);
+    border-color: rgba(255, 255, 255, 0.5);
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+  }
+
+  &:active {
+    transform: translateY(0);
+  }
+
+  .material-symbols-outlined {
+    font-size: 20px;
+  }
 `;
 
 const ContentContainer = styled.div`
@@ -149,7 +211,9 @@ const GitHubLink = styled.a`
   }
 `;
 
-function App() {
+function TodoApp() {
+  const navigate = useNavigate();
+
   // Multi-list state
   const [lists, setLists] = useState<{ [listId: string]: TodoListType }>({});
   const [currentListId, setCurrentListId] = useState<string | null>(null);
@@ -295,10 +359,12 @@ function App() {
     const newList = createNewList('New List');
     setLists((prev) => ({ ...prev, [newList.id]: newList }));
     setCurrentListId(newList.id);
+    trackListCreated();
   };
 
   const handleSwitchList = (listId: string) => {
     setCurrentListId(listId);
+    trackListSwitched();
   };
 
   const handleDeleteList = (listId: string) => {
@@ -307,6 +373,8 @@ function App() {
       delete updated[listId];
       return updated;
     });
+
+    trackListDeleted();
 
     // If we deleted the current list, switch to another one
     if (currentListId === listId) {
@@ -333,6 +401,7 @@ function App() {
         updatedAt: Date.now(),
       },
     }));
+    trackListRenamed();
   };
 
   const handleMarkdownChange = (newMarkdown: string) => {
@@ -351,13 +420,17 @@ function App() {
   const handleToggleMinimize = () => {
     if (!currentListId) return;
     
-    setLists((prev) => ({
-      ...prev,
-      [currentListId]: {
-        ...prev[currentListId],
-        isMinimized: !prev[currentListId].isMinimized,
-      },
-    }));
+    setLists((prev) => {
+      const newIsMinimized = !prev[currentListId].isMinimized;
+      trackEditorToggled(newIsMinimized);
+      return {
+        ...prev,
+        [currentListId]: {
+          ...prev[currentListId],
+          isMinimized: newIsMinimized,
+        },
+      };
+    });
   };
 
   // Task management helpers
@@ -408,6 +481,12 @@ function App() {
       const targetTask = findTask(prevTasks);
       if (targetTask) {
         newCompletedState = !targetTask.completed;
+        // Track completion or uncompletion
+        if (newCompletedState) {
+          trackTaskCompleted();
+        } else {
+          trackTaskUncompleted();
+        }
       }
 
       // Helper to mark a task and all its children with the same completed state
@@ -438,6 +517,8 @@ function App() {
     setTaskHistory(prev => [...prev.slice(-19), { tasks: currentTasks, timestamp: Date.now() }]);
     setCanUndo(true);
     
+    trackTaskUpdated();
+    
     updateCurrentListTasks((prevTasks) =>
       updateTasksRecursively(prevTasks, (task) =>
         task.id === id ? { ...task, text } : task
@@ -461,6 +542,8 @@ function App() {
     const currentTasks = lists[currentListId].tasks;
     setTaskHistory(prev => [...prev.slice(-19), { tasks: currentTasks, timestamp: Date.now() }]);
     setCanUndo(true);
+    
+    trackTaskDeleted();
     
     updateCurrentListTasks((prevTasks) => removeTaskById(prevTasks, id));
   };
@@ -491,6 +574,7 @@ function App() {
   };
 
   const handleAddSubtask = (parentId: string) => {
+    trackSubtaskAdded();
     updateCurrentListTasks((prevTasks) => addSubtaskToParent(prevTasks, parentId));
   };
 
@@ -502,6 +586,7 @@ function App() {
       level: 0,
       children: [],
     };
+    trackTaskCreated('manual');
     updateCurrentListTasks((prevTasks) => [...prevTasks, newTask]);
   };
 
@@ -514,6 +599,7 @@ function App() {
       isHeader: true,
       children: [],
     };
+    trackSectionAdded();
     updateCurrentListTasks((prevTasks) => [...prevTasks, newSection]);
   };
 
@@ -528,6 +614,8 @@ function App() {
     const currentTasks = lists[currentListId].tasks;
     setTaskHistory(prev => [...prev.slice(-19), { tasks: currentTasks, timestamp: Date.now() }]);
     setCanUndo(true);
+    
+    trackTaskMoved();
     
     updateCurrentListTasks((prevTasks) => {
       // Deep clone to avoid mutations
@@ -619,6 +707,8 @@ function App() {
     
     const lastState = taskHistory[taskHistory.length - 1];
     
+    trackUndoAction();
+    
     setLists((prev) => ({
       ...prev,
       [currentListId]: {
@@ -637,6 +727,7 @@ function App() {
     
     try {
       await navigator.clipboard.writeText(currentList.markdown);
+      trackMarkdownExported();
       alert('✅ Markdown copied to clipboard!');
     } catch (err) {
       // Fallback for older browsers
@@ -648,6 +739,7 @@ function App() {
       textArea.select();
       try {
         document.execCommand('copy');
+        trackMarkdownExported();
         alert('✅ Markdown copied to clipboard!');
       } catch (e) {
         alert('❌ Failed to copy to clipboard. Please try again.');
@@ -677,6 +769,8 @@ function App() {
     document.body.appendChild(link);
     link.click();
     
+    trackMarkdownDownloaded();
+    
     // Cleanup
     document.body.removeChild(link);
     URL.revokeObjectURL(url);
@@ -689,6 +783,7 @@ function App() {
     const fileName = file.name.toLowerCase();
     if (!fileName.endsWith('.md') && !fileName.endsWith('.txt')) {
       alert('❌ Invalid file type. Please select a .md or .txt file.');
+      trackMarkdownImported(false);
       return;
     }
 
@@ -696,6 +791,7 @@ function App() {
     const maxSize = 1048576; // 1MB in bytes
     if (file.size > maxSize) {
       alert('❌ File is too large. Maximum file size is 1MB.');
+      trackMarkdownImported(false);
       return;
     }
 
@@ -716,11 +812,13 @@ function App() {
             updatedAt: Date.now(),
           },
         }));
+        trackMarkdownImported(true);
       }
     };
 
     reader.onerror = () => {
       alert('❌ Failed to read file. Please try again.');
+      trackMarkdownImported(false);
     };
 
     reader.readAsText(file);
@@ -741,6 +839,8 @@ function App() {
     setTaskHistory(prev => [...prev.slice(-19), { tasks: currentTasks, timestamp: Date.now() }]);
     setCanUndo(true);
 
+    trackBulkTasksAdded(newTasks.length, 'markdown');
+
     // Merge the new tasks with existing tasks
     const mergedTasks = mergeTasks(currentTasks, newTasks, parentId);
 
@@ -755,6 +855,8 @@ function App() {
     const currentTasks = lists[currentListId].tasks;
     setTaskHistory(prev => [...prev.slice(-19), { tasks: currentTasks, timestamp: Date.now() }]);
     setCanUndo(true);
+
+    trackTaskCreated('quick');
 
     // Create a new task at the root level
     const newTask: Task = {
@@ -795,6 +897,20 @@ function App() {
     return filterRecursive(tasks);
   };
 
+  // Handler wrappers with analytics tracking
+  const handleSearchChange = (query: string) => {
+    setSearchQuery(query);
+    if (query.trim()) {
+      trackSearchUsed(query.length);
+    }
+  };
+
+  const handleToggleHideCompleted = () => {
+    const newValue = !hideCompleted;
+    setHideCompleted(newValue);
+    trackHideCompletedToggled(newValue);
+  };
+
   // Don't render until we've loaded from storage
   if (isInitialMount.current) {
     return null;
@@ -806,6 +922,17 @@ function App() {
         <Header>
           <Title>Markdown Todo List</Title>
           <Subtitle>Transform your markdown into an interactive todo list</Subtitle>
+          <HeaderActions>
+            <VisualizerButton
+              onClick={() => {
+                trackMarkdownVisualizerOpened();
+                navigate('/visualizer');
+              }}
+            >
+              <span className="material-symbols-outlined">preview</span>
+              Markdown Visualizer
+            </VisualizerButton>
+          </HeaderActions>
         </Header>
         <ContentContainer>
           <Sidebar
@@ -830,7 +957,7 @@ function App() {
                   tasks={filterTasksBySearch(currentList.tasks, searchQuery)}
                   listName={currentList.name}
                   searchQuery={searchQuery}
-                  onSearchChange={setSearchQuery}
+                  onSearchChange={handleSearchChange}
                   onListNameChange={handleListNameChange}
                   onToggle={handleToggle}
                   onUpdate={handleUpdate}
@@ -842,7 +969,7 @@ function App() {
                   onExport={handleExport}
                   onDownload={handleDownload}
                   hideCompleted={hideCompleted}
-                  onToggleHideCompleted={() => setHideCompleted(!hideCompleted)}
+                  onToggleHideCompleted={handleToggleHideCompleted}
                   onUndo={handleUndo}
                   canUndo={canUndo}
                   onAddTasksFromMarkdown={handleAddTasksFromMarkdown}
@@ -869,10 +996,21 @@ function App() {
         rel="noopener noreferrer"
         title="Photo by John Towner on Unsplash"
       >
-        
+
         Image by <span>John Towner</span>
       </Attribution>
     </AppContainer>
+  );
+}
+
+function App() {
+  return (
+    <BrowserRouter>
+      <Routes>
+        <Route path="/" element={<TodoApp />} />
+        <Route path="/visualizer" element={<MarkdownVisualizerPage />} />
+      </Routes>
+    </BrowserRouter>
   );
 }
 

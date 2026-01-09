@@ -74,7 +74,16 @@ cd todo-list
 pnpm install
 ```
 
-3. **Start the development server**:
+3. **Configure environment variables** (optional):
+```bash
+# Create .env.local file
+cp .env.example .env.local
+
+# Or manually create .env.local with:
+echo "VITE_GA_MEASUREMENT_ID=G-XXXXXXXXXX" > .env.local
+```
+
+4. **Start the development server**:
 ```bash
 pnpm dev
 ```
@@ -219,7 +228,9 @@ todo-list/
 │   │   └── TodoList.ts          # TodoList and StorageData interfaces
 │   │
 │   ├── utils/
+│   │   ├── analytics.ts         # Google Analytics tracking utilities
 │   │   ├── exportMarkdown.ts    # Tasks → Markdown conversion
+│   │   ├── linkify.tsx          # URL detection and linkification
 │   │   ├── markdownParser.ts    # Markdown → Tasks parsing logic
 │   │   └── storage.ts           # localStorage operations
 │   │
@@ -310,6 +321,54 @@ To change the localStorage key, modify the `STORAGE_KEY` constant in `src/utils/
 
 ## ⚙️ Configuration
 
+### Environment Variables
+
+The app supports optional environment variables for configuration:
+
+#### Google Analytics (Optional)
+
+To enable Google Analytics tracking:
+
+1. **Development**: Create `.env.local` in the project root:
+```bash
+# .env.local (gitignored)
+VITE_GA_MEASUREMENT_ID=G-99W9E25V3C
+```
+
+2. **Production**: Set environment variables in your hosting platform:
+
+**Vercel**:
+```bash
+vercel env add VITE_GA_MEASUREMENT_ID
+# Enter: G-99W9E25V3C
+```
+
+Or via Vercel dashboard:
+- Go to Project Settings → Environment Variables
+- Add `VITE_GA_MEASUREMENT_ID` with value `G-99W9E25V3C`
+- Set for Production, Preview, and Development
+
+**Netlify**:
+```bash
+netlify env:set VITE_GA_MEASUREMENT_ID G-99W9E25V3C
+```
+
+Or via Netlify dashboard:
+- Go to Site Settings → Environment Variables
+- Add `VITE_GA_MEASUREMENT_ID` with value `G-99W9E25V3C`
+
+**GitHub Pages / Other Platforms**:
+- Add the variable during build: `VITE_GA_MEASUREMENT_ID=G-99W9E25V3C npm run build`
+- Or use your platform's environment variable settings
+
+#### Tracked Events
+
+When Google Analytics is enabled, the app automatically tracks:
+- Task operations (create, complete, update, delete)
+- List management (create, switch, rename, delete)
+- Data operations (export, download, import, undo)
+- UI interactions (search, hide completed, toggle editor)
+
 ### TypeScript Configuration
 - **`tsconfig.json`**: Base TypeScript configuration
 - **`tsconfig.app.json`**: App-specific compiler options
@@ -396,22 +455,45 @@ Serves the production build locally at `http://localhost:4173` for testing.
 
 The built app is a static site. Deploy to any static hosting service:
 
+#### Google Cloud Run (Containerized)
+
+This project includes a Dockerfile for containerized deployment.
+
+**📖 See [CLOUD_RUN_DEPLOYMENT.md](./CLOUD_RUN_DEPLOYMENT.md) for complete Cloud Run deployment guide.**
+
+Quick deploy:
+```bash
+# Build and deploy with Google Analytics
+gcloud builds submit \
+  --tag=gcr.io/YOUR_PROJECT_ID/todo-list \
+  --build-arg=VITE_GA_MEASUREMENT_ID=G-99W9E25V3C
+
+gcloud run deploy todo-list \
+  --image=gcr.io/YOUR_PROJECT_ID/todo-list \
+  --platform=managed \
+  --region=us-central1 \
+  --allow-unauthenticated \
+  --port=8080
+```
+
 #### Vercel
 ```bash
 npm i -g vercel
 vercel --prod
 ```
+Set environment variable in dashboard: `VITE_GA_MEASUREMENT_ID=G-99W9E25V3C`
 
 #### Netlify
 ```bash
 npm i -g netlify-cli
 netlify deploy --prod --dir=dist
 ```
+Set environment variable in dashboard: `VITE_GA_MEASUREMENT_ID=G-99W9E25V3C`
 
 #### GitHub Pages
 ```bash
 # Add to package.json scripts:
-"deploy": "pnpm build && gh-pages -d dist"
+"deploy": "VITE_GA_MEASUREMENT_ID=G-99W9E25V3C pnpm build && gh-pages -d dist"
 
 pnpm run deploy
 ```
@@ -422,6 +504,8 @@ pnpm run deploy
 - Cloudflare Pages
 - Render
 - Railway
+
+**Note:** For all platforms, set `VITE_GA_MEASUREMENT_ID=G-99W9E25V3C` as an environment variable.
 
 ---
 
