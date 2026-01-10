@@ -5,6 +5,7 @@ import type { Task } from '../types/Task';
 import { linkifyText } from '../utils/linkify';
 import { exportSingleTaskToMarkdown } from '../utils/exportMarkdown';
 import { DueDatePicker } from './DueDatePicker';
+import { AddToCalendar } from './AddToCalendar';
 
 const ItemContainer = styled.div<{ $level: number; $isDragging?: boolean; $isDropTarget?: boolean }>`
   margin-left: ${props => props.$level * 24}px;
@@ -468,6 +469,9 @@ export const TodoItem: React.FC<TodoItemProps> = ({
                     {showCopyFeedback ? 'check' : 'content_copy'}
                   </span>
                 </ActionButton>
+                {task.dueDate && !task.completed && (
+                  <AddToCalendar task={task} />
+                )}
                 {onFocus && (
                   <ActionButton onClick={() => onFocus(task.id)} title="Focus on this task">
                     <span className="material-symbols-outlined" style={{ fontSize: '18px' }}>center_focus_strong</span>

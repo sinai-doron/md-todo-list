@@ -7,6 +7,7 @@ import { TodoList } from './components/TodoList';
 import { Sidebar } from './components/Sidebar';
 import { MarkdownVisualizerPage } from './pages/MarkdownVisualizerPage';
 import { ProductivityDashboard } from './components/ProductivityDashboard';
+import { NotificationSettings } from './components/NotificationSettings';
 import { SEO } from './components/SEO';
 import type { Task } from './types/Task';
 import type { TodoList as TodoListType } from './types/TodoList';
@@ -18,6 +19,7 @@ import {
   createNewList,
 } from './utils/storage';
 import { useProductivityStats } from './hooks/useProductivityStats';
+import { useTaskNotifications } from './hooks/useTaskNotifications';
 import {
   trackListCreated,
   trackListSwitched,
@@ -225,10 +227,30 @@ function TodoApp() {
   const [hideCompleted, setHideCompleted] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [isDashboardOpen, setIsDashboardOpen] = useState(false);
+  const [isNotificationSettingsOpen, setIsNotificationSettingsOpen] = useState(false);
 
   // Productivity statistics
   const { stats, recordTaskCompletion, recordTaskUncompletion } = useProductivityStats();
-  
+
+  // Get all tasks from all lists for notifications
+  const getAllTasks = (): Task[] => {
+    const allTasks: Task[] = [];
+    Object.values(lists).forEach(list => {
+      allTasks.push(...list.tasks);
+    });
+    return allTasks;
+  };
+
+  // Task notifications
+  const {
+    settings: notificationSettings,
+    isSupported: notificationsSupported,
+    permissionStatus: notificationPermission,
+    updateSettings: updateNotificationSettings,
+    requestPermission: requestNotificationPermission,
+    testNotification,
+  } = useTaskNotifications(getAllTasks());
+
   // Undo history state
   const [taskHistory, setTaskHistory] = useState<Array<{ tasks: Task[]; timestamp: number }>>([]);
   const [canUndo, setCanUndo] = useState(false);
@@ -963,6 +985,10 @@ function TodoApp() {
               <span className="material-symbols-outlined">insights</span>
               Productivity
             </VisualizerButton>
+            <VisualizerButton onClick={() => setIsNotificationSettingsOpen(true)}>
+              <span className="material-symbols-outlined">notifications</span>
+              Notifications
+            </VisualizerButton>
             <VisualizerButton
               onClick={() => {
                 trackMarkdownVisualizerOpened();
@@ -1046,6 +1072,18 @@ function TodoApp() {
           stats={stats}
           lists={lists}
           onClose={() => setIsDashboardOpen(false)}
+        />
+      )}
+
+      {isNotificationSettingsOpen && (
+        <NotificationSettings
+          settings={notificationSettings}
+          isSupported={notificationsSupported}
+          permissionStatus={notificationPermission}
+          onUpdate={updateNotificationSettings}
+          onRequestPermission={requestNotificationPermission}
+          onTest={testNotification}
+          onClose={() => setIsNotificationSettingsOpen(false)}
         />
       )}
     </AppContainer>

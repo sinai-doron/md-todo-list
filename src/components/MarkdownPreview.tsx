@@ -1,9 +1,45 @@
 import React from 'react';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
+import rehypeRaw from 'rehype-raw';
+import rehypeSanitize, { defaultSchema } from 'rehype-sanitize';
 import { Prism as SyntaxHighlighter } from 'react-syntax-highlighter';
 import { oneDark } from 'react-syntax-highlighter/dist/esm/styles/prism';
 import styled from 'styled-components';
+
+// Extended sanitization schema to allow GitHub-style HTML elements
+const sanitizeSchema = {
+  ...defaultSchema,
+  tagNames: [
+    ...(defaultSchema.tagNames || []),
+    'details',
+    'summary',
+    'kbd',
+    'mark',
+    'abbr',
+    'sub',
+    'sup',
+    'ins',
+    'var',
+    'samp',
+    'dfn',
+    'figure',
+    'figcaption',
+    'picture',
+    'source',
+    'video',
+    'audio',
+  ],
+  attributes: {
+    ...defaultSchema.attributes,
+    details: ['open'],
+    abbr: ['title'],
+    video: ['src', 'controls', 'width', 'height', 'poster', 'preload'],
+    audio: ['src', 'controls'],
+    source: ['src', 'type'],
+    img: [...(defaultSchema.attributes?.img || []), 'loading', 'decoding'],
+  },
+};
 
 const PreviewContainer = styled.div`
   font-size: 14px;
@@ -130,6 +166,94 @@ const PreviewContainer = styled.div`
   del {
     color: #999;
   }
+
+  /* HTML elements - GitHub style */
+  details {
+    margin: 12px 0;
+    padding: 8px 12px;
+    background: #f6f8fa;
+    border: 1px solid #d0d7de;
+    border-radius: 6px;
+  }
+
+  details[open] {
+    padding-bottom: 12px;
+  }
+
+  summary {
+    cursor: pointer;
+    font-weight: 600;
+    padding: 4px 0;
+
+    &:hover {
+      color: #0969da;
+    }
+  }
+
+  details[open] > summary {
+    margin-bottom: 8px;
+    border-bottom: 1px solid #d0d7de;
+    padding-bottom: 8px;
+  }
+
+  kbd {
+    display: inline-block;
+    padding: 3px 6px;
+    font-size: 11px;
+    font-family: ui-monospace, monospace;
+    line-height: 1;
+    color: #24292f;
+    vertical-align: middle;
+    background: #f6f8fa;
+    border: 1px solid #d0d7de;
+    border-radius: 6px;
+    box-shadow: inset 0 -1px 0 #d0d7de;
+  }
+
+  mark {
+    background-color: #fff8c5;
+    padding: 0.1em 0.3em;
+    border-radius: 3px;
+  }
+
+  abbr[title] {
+    text-decoration: underline dotted;
+    cursor: help;
+  }
+
+  sub, sup {
+    font-size: 75%;
+    line-height: 0;
+    position: relative;
+    vertical-align: baseline;
+  }
+
+  sup { top: -0.5em; }
+  sub { bottom: -0.25em; }
+
+  ins {
+    background-color: #dafbe1;
+    text-decoration: none;
+    padding: 0.1em 0.3em;
+    border-radius: 3px;
+  }
+
+  figure {
+    margin: 16px 0;
+    text-align: center;
+  }
+
+  figcaption {
+    font-size: 12px;
+    color: #666;
+    margin-top: 8px;
+    font-style: italic;
+  }
+
+  video, audio {
+    max-width: 100%;
+    border-radius: 6px;
+  }
 `;
 
 const EmptyState = styled.div`
@@ -168,6 +292,7 @@ export const MarkdownPreview: React.FC<MarkdownPreviewProps> = ({ content }) => 
     <PreviewContainer>
       <ReactMarkdown
         remarkPlugins={[remarkGfm]}
+        rehypePlugins={[rehypeRaw, [rehypeSanitize, sanitizeSchema]]}
         components={{
           code({ className, children, ...props }) {
             const match = /language-(\w+)/.exec(className || '');

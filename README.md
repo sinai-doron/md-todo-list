@@ -41,6 +41,9 @@
 - **Smart Sections**: Automatically group tasks by due date status (Overdue, Today, Upcoming)
 - **Summary Bar**: Clickable chips showing counts of overdue, today, and upcoming tasks
 - **Filter by Status**: Click summary chips to filter tasks by due date status
+- **📅 Add to Calendar**: Export tasks to your calendar
+  - **Google Calendar**: Opens Google Calendar with task pre-filled
+  - **ICS Download**: Download .ics file for any calendar app (Apple, Outlook, etc.)
 
 ### 🎯 Focus Mode
 - **Distraction-Free View**: Full-screen focus on a single task
@@ -65,6 +68,22 @@
 - **Historical Data**: 90-day rolling window of productivity statistics
 - **Longest Streak**: Track your best productivity streak
 
+### 📁 Markdown Visualizer
+- **Dual-Pane Interface**: Input on left, live preview on right
+- **File Upload**: Drag-and-drop or click to browse for .md files
+- **Live Preview**: See formatted markdown as you type
+- **Task Detection**: Automatically counts tasks found in markdown
+- **GitHub-Style HTML**: Supports HTML tags like GitHub does
+  - `<details>` / `<summary>` - Collapsible sections
+  - `<kbd>` - Keyboard key styling
+  - `<mark>` - Highlighted text
+  - `<abbr>` - Abbreviations with tooltips
+  - `<sub>` / `<sup>` - Subscript and superscript
+  - `<ins>` - Inserted text highlighting
+  - `<figure>` / `<figcaption>` - Images with captions
+  - `<video>` / `<audio>` - Media elements
+- **Security**: HTML is sanitized to prevent XSS attacks
+
 ### 🎨 Advanced Features
 - **Drag & Drop**: Reorder tasks by dragging them to new positions with visual drop indicators
   - Drop **before** or **after** sibling tasks
@@ -74,7 +93,6 @@
 - **📤 Export Options**:
   - Copy markdown to clipboard
   - Download as `.md` file
-- **📁 Markdown Visualizer**: Preview and convert any markdown file to tasks
 - **🔽 Minimizable Input**: Collapse the markdown input area after transformation to focus on your tasks
 - **📱 Responsive Design**: Beautiful, modern UI that works seamlessly on desktop and mobile devices
 - **🌲 Aesthetic Background**: Gorgeous forest road background with overlay for better readability
@@ -255,12 +273,15 @@ todo-list/
 ├── src/
 │   ├── components/
 │   │   ├── AddTasksModal.tsx    # Modal for bulk adding tasks
+│   │   ├── AddToCalendar.tsx    # Calendar export dropdown
 │   │   ├── CompletionChart.tsx  # Bar chart for completion trends
 │   │   ├── DueDatePicker.tsx    # Due date selection dropdown
 │   │   ├── DueDateSummary.tsx   # Summary bar for due date statuses
 │   │   ├── FocusMode.tsx        # Full-screen focus view
 │   │   ├── ListCompletionRates.tsx  # Per-list completion stats
 │   │   ├── MarkdownInput.tsx    # Markdown input textarea
+│   │   ├── MarkdownPreview.tsx  # Markdown preview with HTML support
+│   │   ├── NotificationSettings.tsx  # Notification preferences
 │   │   ├── PomodoroSettings.tsx # Timer settings modal
 │   │   ├── PomodoroTimer.tsx    # Pomodoro timer component
 │   │   ├── ProductivityDashboard.tsx  # Stats dashboard modal
@@ -272,24 +293,30 @@ todo-list/
 │   │
 │   ├── hooks/
 │   │   ├── useAnalytics.ts      # Analytics hook
+│   │   ├── useMarkdownFile.ts   # Markdown file upload handling
 │   │   ├── usePomodoroTimer.ts  # Pomodoro timer state management
-│   │   └── useProductivityStats.ts  # Productivity stats hook
+│   │   ├── useProductivityStats.ts  # Productivity stats hook
+│   │   └── useTaskNotifications.ts  # Task notification management
 │   │
 │   ├── pages/
 │   │   └── MarkdownVisualizerPage.tsx  # Markdown file preview page
 │   │
 │   ├── types/
+│   │   ├── NotificationSettings.ts  # Notification configuration types
 │   │   ├── Statistics.ts        # Productivity statistics types
 │   │   ├── Task.ts              # Task interface with hierarchy
 │   │   └── TodoList.ts          # TodoList and StorageData interfaces
 │   │
 │   ├── utils/
 │   │   ├── analytics.ts         # Google Analytics tracking
+│   │   ├── calendar.ts          # Calendar export (Google Calendar, ICS)
 │   │   ├── exportMarkdown.ts    # Tasks → Markdown conversion
 │   │   ├── linkify.tsx          # URL detection and linkification
 │   │   ├── markdownParser.ts    # Markdown → Tasks parsing
+│   │   ├── notificationStorage.ts  # Notification settings persistence
 │   │   ├── statisticsStorage.ts # Productivity stats persistence
-│   │   └── storage.ts           # localStorage operations
+│   │   ├── storage.ts           # localStorage operations
+│   │   └── taskNotifications.ts # Notification scheduling and sending
 │   │
 │   ├── App.tsx                  # Main app with routing
 │   ├── main.tsx                 # Application entry point
@@ -509,7 +536,7 @@ The project uses ESLint v9 with flat config format:
 2. **No Sync**: Lists don't sync across devices or browsers
 3. **No Export History**: Can only export current markdown state
 4. **Limited Undo**: Only drag-drop operations support undo (max 20 actions)
-5. **No Markdown Rendering**: Task text is plain text (no bold, italics, links)
+5. **Plain Task Text**: Task text in the main view is plain text (use Markdown Visualizer for rich preview)
 
 ---
 
@@ -598,15 +625,17 @@ Contributions are welcome! Here are some ideas:
 ### Feature Ideas
 - [ ] Backend sync (Firebase, Supabase, etc.)
 - [ ] Collaborative editing
-- [ ] Markdown rendering in tasks (bold, italic, links)
 - [ ] Tags and filters
 - [ ] Dark mode
 - [ ] Task templates
 - [ ] Priority levels
 - [ ] Recurring tasks
-- [ ] Notifications/Reminders
 
 ### Recently Implemented
+- [x] Add to Calendar (Google Calendar + ICS download)
+- [x] HTML support in Markdown Visualizer (GitHub-style)
+- [x] Task Notifications with reminders
+- [x] SEO optimization (meta tags, Open Graph, sitemap)
 - [x] Due dates with visual indicators
 - [x] Import from .md files (Markdown Visualizer)
 - [x] Focus Mode
@@ -614,6 +643,8 @@ Contributions are welcome! Here are some ideas:
 - [x] Productivity Dashboard with statistics
 - [x] Streak tracking
 - [x] Quick add tasks
+- [x] Copy task/section to clipboard
+- [x] Link detection in tasks
 
 ### Development Process
 1. Fork the repository

@@ -431,7 +431,20 @@ export const MarkdownVisualizerPage: React.FC = () => {
 |----------|----------|
 | Cell 1   | Cell 2   |
 
-**Bold text** and *italic text*"
+**Bold text** and *italic text*
+
+## HTML Support
+
+<details>
+<summary>Click to expand</summary>
+
+Hidden content here!
+
+</details>
+
+Press <kbd>Ctrl</kbd> + <kbd>C</kbd> to copy.
+
+This is <mark>highlighted</mark> text."
                 />
               </InputPane>
             </PaneContent>

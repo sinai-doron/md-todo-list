@@ -325,3 +325,44 @@ export const trackDashboardViewChanged = (view: '7_days' | '30_days') => {
     view,
   });
 };
+
+// Calendar Integration
+export const trackAddToGoogleCalendar = () => {
+  trackEvent('add_to_google_calendar', {
+    event_category: 'calendar',
+  });
+};
+
+export const trackDownloadICS = () => {
+  trackEvent('download_ics', {
+    event_category: 'calendar',
+  });
+};
+
+// Notifications
+export const trackNotificationSettingsOpened = () => {
+  trackEvent('notification_settings_opened', {
+    event_category: 'notifications',
+  });
+};
+
+export const trackNotificationPermissionRequested = (granted: boolean) => {
+  trackEvent('notification_permission_requested', {
+    event_category: 'notifications',
+    granted,
+  });
+};
+
+export const trackNotificationEnabled = (enabled: boolean) => {
+  trackEvent('notification_enabled', {
+    event_category: 'notifications',
+    enabled,
+  });
+};
+
+export const trackNotificationSent = (type: 'daily' | 'before_due' | 'test') => {
+  trackEvent('notification_sent', {
+    event_category: 'notifications',
+    notification_type: type,
+  });
+};
