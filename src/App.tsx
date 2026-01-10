@@ -7,13 +7,15 @@ import { TodoList } from './components/TodoList';
 import { Sidebar } from './components/Sidebar';
 import { MarkdownVisualizerPage } from './pages/MarkdownVisualizerPage';
 import { KanbanBoardPage } from './pages/KanbanBoardPage';
+import { HabitsPage } from './pages/HabitsPage';
 import { ProductivityDashboard } from './components/ProductivityDashboard';
 import { NotificationSettings } from './components/NotificationSettings';
 import { SEO } from './components/SEO';
-import type { Task } from './types/Task';
+import type { Task, RecurrenceRule } from './types/Task';
 import type { TodoList as TodoListType } from './types/TodoList';
 import { parseMarkdownToTasks, mergeTasks } from './utils/markdownParser';
 import { exportTasksToMarkdown } from './utils/exportMarkdown';
+import { calculateNextDueDate, getTodayString } from './utils/recurrence';
 import {
   loadAllLists,
   saveAllLists,
@@ -44,6 +46,7 @@ import {
   trackSearchUsed,
   trackMarkdownVisualizerOpened,
   trackKanbanOpened,
+  trackHabitsOpened,
 } from './utils/analytics';
 
 const AppContainer = styled.div`
@@ -544,9 +547,40 @@ function TodoApp() {
         return updatedTask;
       };
 
+      // Handle recurring tasks
+      const handleRecurringTask = (task: Task): Task => {
+        if (!task.recurrence || !newCompletedState) {
+          // Not recurring or being uncompleted - handle normally
+          return markTaskAndChildren(task, newCompletedState);
+        }
+
+        // Task is recurring and being completed
+        const today = getTodayString();
+        const nextDueDate = calculateNextDueDate(task.dueDate, task.recurrence, today);
+
+        if (nextDueDate) {
+          // Reset task for next occurrence
+          return {
+            ...task,
+            completed: false,
+            dueDate: nextDueDate,
+            lastCompletedDate: today,
+            completedAt: undefined,
+            // Children stay as-is for recurring tasks
+          };
+        } else {
+          // Recurrence ended - complete normally and remove recurrence
+          return {
+            ...markTaskAndChildren(task, true),
+            isRecurring: false,
+            recurrence: undefined,
+          };
+        }
+      };
+
       return updateTasksRecursively(prevTasks, (task) => {
         if (task.id === id) {
-          return markTaskAndChildren(task, newCompletedState);
+          return handleRecurringTask(task);
         }
         return task;
       });
@@ -925,6 +959,35 @@ function TodoApp() {
     );
   };
 
+  const handleUpdateRecurrence = (id: string, recurrence: RecurrenceRule | undefined) => {
+    trackTaskUpdated();
+
+    updateCurrentListTasks((prevTasks) =>
+      updateTasksRecursively(prevTasks, (task) => {
+        if (task.id !== id) return task;
+
+        if (recurrence) {
+          // Setting recurrence - also set a due date if not already set
+          const dueDate = task.dueDate || getTodayString();
+          return {
+            ...task,
+            recurrence,
+            isRecurring: true,
+            dueDate,
+          };
+        } else {
+          // Removing recurrence
+          return {
+            ...task,
+            recurrence: undefined,
+            isRecurring: false,
+            lastCompletedDate: undefined,
+          };
+        }
+      })
+    );
+  };
+
   // Filter tasks by search query
   const filterTasksBySearch = (tasks: Task[], query: string): Task[] => {
     if (!query.trim()) return tasks;
@@ -1002,6 +1065,15 @@ function TodoApp() {
             </VisualizerButton>
             <VisualizerButton
               onClick={() => {
+                trackHabitsOpened();
+                navigate('/habits');
+              }}
+            >
+              <span className="material-symbols-outlined">local_fire_department</span>
+              Habits
+            </VisualizerButton>
+            <VisualizerButton
+              onClick={() => {
                 trackMarkdownVisualizerOpened();
                 navigate('/visualizer');
               }}
@@ -1052,6 +1124,7 @@ function TodoApp() {
                   onAddTasksFromMarkdown={handleAddTasksFromMarkdown}
                   onQuickAddTask={handleQuickAddTask}
                   onUpdateDueDate={handleUpdateDueDate}
+                  onUpdateRecurrence={handleUpdateRecurrence}
                 />
               </>
             )}
@@ -1109,6 +1182,7 @@ function AppRoutes() {
       <Route path="/" element={<TodoApp />} />
       <Route path="/visualizer" element={<MarkdownVisualizerPage />} />
       <Route path="/kanban" element={<KanbanBoardPage />} />
+      <Route path="/habits" element={<HabitsPage />} />
     </Routes>
   );
 }

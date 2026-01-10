@@ -381,3 +381,56 @@ export const trackKanbanCardMoved = (fromColumn: string, toColumn: string) => {
     to_column: toColumn,
   });
 };
+
+// Habits
+export const trackHabitsOpened = () => {
+  trackEvent('habits_opened', {
+    event_category: 'habits',
+  });
+};
+
+export const trackHabitCreated = (frequency: string) => {
+  trackEvent('habit_created', {
+    event_category: 'habits',
+    frequency,
+  });
+};
+
+export const trackHabitCompleted = () => {
+  trackEvent('habit_completed', {
+    event_category: 'habits',
+  });
+};
+
+export const trackHabitDeleted = () => {
+  trackEvent('habit_deleted', {
+    event_category: 'habits',
+  });
+};
+
+export const trackHabitArchived = (archived: boolean) => {
+  trackEvent('habit_archived', {
+    event_category: 'habits',
+    archived,
+  });
+};
+
+// Recurring Tasks
+export const trackRecurrenceSet = (frequency: string) => {
+  trackEvent('recurrence_set', {
+    event_category: 'recurrence',
+    frequency,
+  });
+};
+
+export const trackRecurrenceRemoved = () => {
+  trackEvent('recurrence_removed', {
+    event_category: 'recurrence',
+  });
+};
+
+export const trackRecurringTaskCompleted = () => {
+  trackEvent('recurring_task_completed', {
+    event_category: 'recurrence',
+  });
+};

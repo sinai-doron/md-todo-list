@@ -1,5 +1,15 @@
 export type KanbanStatus = 'todo' | 'in-progress' | 'done';
 
+export type RecurrenceFrequency = 'daily' | 'weekly' | 'monthly' | 'custom';
+
+export type RecurrenceRule = {
+  frequency: RecurrenceFrequency;
+  interval: number;           // Every N days/weeks/months
+  daysOfWeek?: number[];      // 0-6 (Sun-Sat) for weekly recurrence
+  dayOfMonth?: number;        // 1-31 for monthly recurrence
+  endDate?: string;           // Optional end date (YYYY-MM-DD)
+};
+
 export type Task = {
   id: string;
   text: string;
@@ -7,9 +17,12 @@ export type Task = {
   level: number;
   isHeader?: boolean;
   children?: Task[];
-  dueDate?: string; // ISO date string (YYYY-MM-DD)
-  completedAt?: number; // Unix timestamp when task was completed
-  status?: KanbanStatus; // Kanban column status
+  dueDate?: string;           // ISO date string (YYYY-MM-DD)
+  completedAt?: number;       // Unix timestamp when task was completed
+  status?: KanbanStatus;      // Kanban column status
+  recurrence?: RecurrenceRule; // Recurring task configuration
+  isRecurring?: boolean;      // Flag for recurring tasks
+  lastCompletedDate?: string; // Last completion date for recurring tasks
 };
 
 /**

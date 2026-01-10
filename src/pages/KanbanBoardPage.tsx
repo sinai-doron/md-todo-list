@@ -4,8 +4,10 @@ import styled from 'styled-components';
 import { SEO } from '../components/SEO';
 import { KanbanBoard } from '../components/KanbanBoard';
 import type { Task, KanbanStatus } from '../types/Task';
+import { getTaskStatus } from '../types/Task';
 import type { TodoList } from '../types/TodoList';
 import { loadAllLists, saveAllLists } from '../utils/storage';
+import { useProductivityStats } from '../hooks/useProductivityStats';
 
 const PageContainer = styled.div`
   min-height: 100vh;
@@ -149,6 +151,7 @@ export const KanbanBoardPage: React.FC = () => {
   const navigate = useNavigate();
   const [lists, setLists] = useState<{ [listId: string]: TodoList }>({});
   const [currentListId, setCurrentListId] = useState<string | null>(null);
+  const { recordTaskCompletion, recordTaskUncompletion } = useProductivityStats();
 
   // Load lists on mount
   useEffect(() => {
@@ -183,39 +186,67 @@ export const KanbanBoardPage: React.FC = () => {
 
   const counts = getTaskCounts();
 
+  // Find a task by ID recursively
+  const findTaskById = useCallback((tasks: Task[], taskId: string): Task | null => {
+    for (const task of tasks) {
+      if (task.id === taskId) return task;
+      if (task.children) {
+        const found = findTaskById(task.children, taskId);
+        if (found) return found;
+      }
+    }
+    return null;
+  }, []);
+
   // Update task status
   const handleUpdateTaskStatus = useCallback((taskId: string, newStatus: KanbanStatus) => {
     if (!currentListId) return;
 
+    const list = lists[currentListId];
+    if (!list) return;
+
+    // Find the task to get its current status
+    const task = findTaskById(list.tasks, taskId);
+    if (!task) return;
+
+    const oldStatus = getTaskStatus(task);
+
+    // Track productivity stats
+    if (newStatus === 'done' && oldStatus !== 'done') {
+      recordTaskCompletion(taskId, currentListId);
+    } else if (newStatus !== 'done' && oldStatus === 'done') {
+      recordTaskUncompletion(taskId, currentListId);
+    }
+
     setLists(prevLists => {
-      const list = prevLists[currentListId];
-      if (!list) return prevLists;
+      const prevList = prevLists[currentListId];
+      if (!prevList) return prevLists;
 
       const updateTaskRecursively = (tasks: Task[]): Task[] => {
-        return tasks.map(task => {
-          if (task.id === taskId) {
+        return tasks.map(t => {
+          if (t.id === taskId) {
             return {
-              ...task,
+              ...t,
               status: newStatus,
               completed: newStatus === 'done',
               completedAt: newStatus === 'done' ? Date.now() : undefined,
             };
           }
-          if (task.children) {
+          if (t.children) {
             return {
-              ...task,
-              children: updateTaskRecursively(task.children),
+              ...t,
+              children: updateTaskRecursively(t.children),
             };
           }
-          return task;
+          return t;
         });
       };
 
       const updatedLists = {
         ...prevLists,
         [currentListId]: {
-          ...list,
-          tasks: updateTaskRecursively(list.tasks),
+          ...prevList,
+          tasks: updateTaskRecursively(prevList.tasks),
           updatedAt: Date.now(),
         },
       };
@@ -225,7 +256,7 @@ export const KanbanBoardPage: React.FC = () => {
 
       return updatedLists;
     });
-  }, [currentListId]);
+  }, [currentListId, lists, findTaskById, recordTaskCompletion, recordTaskUncompletion]);
 
   const handleBack = useCallback(() => {
     navigate('/');

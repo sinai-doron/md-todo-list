@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import styled from 'styled-components';
-import type { Task } from '../types/Task';
+import type { Task, RecurrenceRule } from '../types/Task';
 import { TodoItem } from './TodoItem';
 import { AddTasksModal } from './AddTasksModal';
 import { QuickTaskInput } from './QuickTaskInput';
@@ -430,6 +430,7 @@ interface TodoListProps {
   onAddTasksFromMarkdown: (markdown: string, parentId?: string) => void;
   onQuickAddTask: (text: string) => void;
   onUpdateDueDate: (id: string, dueDate: string | undefined) => void;
+  onUpdateRecurrence: (id: string, recurrence: RecurrenceRule | undefined) => void;
 }
 
 export const TodoList: React.FC<TodoListProps> = ({
@@ -454,6 +455,7 @@ export const TodoList: React.FC<TodoListProps> = ({
   onAddTasksFromMarkdown,
   onQuickAddTask,
   onUpdateDueDate,
+  onUpdateRecurrence,
 }) => {
   const [collapsedSections, setCollapsedSections] = useState<Set<string>>(new Set());
   const [isSpeedDialOpen, setIsSpeedDialOpen] = useState(false);
@@ -752,6 +754,7 @@ export const TodoList: React.FC<TodoListProps> = ({
       collapsedSections={collapsedSections}
       onAddTasksFromMarkdown={handleOpenAddTasksModal}
       onUpdateDueDate={onUpdateDueDate}
+      onUpdateRecurrence={onUpdateRecurrence}
     />
   );
 

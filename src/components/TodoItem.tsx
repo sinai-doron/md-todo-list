@@ -1,11 +1,13 @@
 import React, { useState } from 'react';
 import type { KeyboardEvent } from 'react';
 import styled from 'styled-components';
-import type { Task } from '../types/Task';
+import type { Task, RecurrenceRule } from '../types/Task';
 import { linkifyText } from '../utils/linkify';
 import { exportSingleTaskToMarkdown } from '../utils/exportMarkdown';
 import { DueDatePicker } from './DueDatePicker';
 import { AddToCalendar } from './AddToCalendar';
+import { RecurrenceIndicator } from './RecurrenceIndicator';
+import { RecurrencePicker } from './RecurrencePicker';
 
 const ItemContainer = styled.div<{ $level: number; $isDragging?: boolean; $isDropTarget?: boolean }>`
   margin-left: ${props => props.$level * 24}px;
@@ -231,6 +233,7 @@ interface TodoItemProps {
   onAddTasksFromMarkdown?: (parentId: string) => void;
   onFocus?: (id: string) => void;
   onUpdateDueDate?: (id: string, dueDate: string | undefined) => void;
+  onUpdateRecurrence?: (id: string, recurrence: RecurrenceRule | undefined) => void;
 }
 
 export const TodoItem: React.FC<TodoItemProps> = ({
@@ -246,12 +249,14 @@ export const TodoItem: React.FC<TodoItemProps> = ({
   onAddTasksFromMarkdown,
   onFocus,
   onUpdateDueDate,
+  onUpdateRecurrence,
 }) => {
   const [isEditing, setIsEditing] = useState(false);
   const [editText, setEditText] = useState(task.text);
   const [isDragging, setIsDragging] = useState(false);
   const [dropPosition, setDropPosition] = useState<'before' | 'after' | 'inside' | null>(null);
   const [showCopyFeedback, setShowCopyFeedback] = useState(false);
+  const [showRecurrencePicker, setShowRecurrencePicker] = useState(false);
 
   const handleSave = () => {
     if (editText.trim()) {
@@ -419,6 +424,12 @@ export const TodoItem: React.FC<TodoItemProps> = ({
               {linkifyText(task.text)}
             </TextDisplay>
           )}
+          {!task.isHeader && onUpdateRecurrence && (
+            <RecurrenceIndicator
+              recurrence={task.recurrence}
+              onClick={() => setShowRecurrencePicker(true)}
+            />
+          )}
           {!task.isHeader && onUpdateDueDate && (
             <DueDatePicker
               dueDate={task.dueDate}
@@ -500,8 +511,20 @@ export const TodoItem: React.FC<TodoItemProps> = ({
           onAddTasksFromMarkdown={onAddTasksFromMarkdown}
           onFocus={onFocus}
           onUpdateDueDate={onUpdateDueDate}
+          onUpdateRecurrence={onUpdateRecurrence}
         />
       ))}
+      {showRecurrencePicker && onUpdateRecurrence && (
+        <RecurrencePicker
+          isOpen={showRecurrencePicker}
+          onClose={() => setShowRecurrencePicker(false)}
+          onSave={(recurrence) => {
+            onUpdateRecurrence(task.id, recurrence);
+            setShowRecurrencePicker(false);
+          }}
+          currentRecurrence={task.recurrence}
+        />
+      )}
     </>
   );
 };
