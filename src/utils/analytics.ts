@@ -366,3 +366,18 @@ export const trackNotificationSent = (type: 'daily' | 'before_due' | 'test') => 
     notification_type: type,
   });
 };
+
+// Kanban Board
+export const trackKanbanOpened = () => {
+  trackEvent('kanban_opened', {
+    event_category: 'kanban',
+  });
+};
+
+export const trackKanbanCardMoved = (fromColumn: string, toColumn: string) => {
+  trackEvent('kanban_card_moved', {
+    event_category: 'kanban',
+    from_column: fromColumn,
+    to_column: toColumn,
+  });
+};

@@ -6,6 +6,7 @@ import { MarkdownInput } from './components/MarkdownInput';
 import { TodoList } from './components/TodoList';
 import { Sidebar } from './components/Sidebar';
 import { MarkdownVisualizerPage } from './pages/MarkdownVisualizerPage';
+import { KanbanBoardPage } from './pages/KanbanBoardPage';
 import { ProductivityDashboard } from './components/ProductivityDashboard';
 import { NotificationSettings } from './components/NotificationSettings';
 import { SEO } from './components/SEO';
@@ -42,6 +43,7 @@ import {
   trackHideCompletedToggled,
   trackSearchUsed,
   trackMarkdownVisualizerOpened,
+  trackKanbanOpened,
 } from './utils/analytics';
 
 const AppContainer = styled.div`
@@ -991,6 +993,15 @@ function TodoApp() {
             </VisualizerButton>
             <VisualizerButton
               onClick={() => {
+                trackKanbanOpened();
+                navigate('/kanban');
+              }}
+            >
+              <span className="material-symbols-outlined">view_kanban</span>
+              Kanban Board
+            </VisualizerButton>
+            <VisualizerButton
+              onClick={() => {
                 trackMarkdownVisualizerOpened();
                 navigate('/visualizer');
               }}
@@ -1097,6 +1108,7 @@ function AppRoutes() {
     <Routes>
       <Route path="/" element={<TodoApp />} />
       <Route path="/visualizer" element={<MarkdownVisualizerPage />} />
+      <Route path="/kanban" element={<KanbanBoardPage />} />
     </Routes>
   );
 }
