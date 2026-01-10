@@ -68,6 +68,17 @@
 - **Historical Data**: 90-day rolling window of productivity statistics
 - **Longest Streak**: Track your best productivity streak
 
+### 📋 Kanban Board
+- **Three-Column Layout**: Organize tasks into To Do, In Progress, and Done columns
+- **Drag & Drop**: Move tasks between columns with smooth drag and drop (powered by @dnd-kit)
+- **Task Cards**: Each card shows task text, due date badge, and subtask progress
+- **Due Date Indicators**: Color-coded borders for overdue (red) and due today (orange) tasks
+- **Subtask Progress**: Visual progress bar showing completion of child tasks
+- **List Selector**: Switch between different todo lists in the Kanban view
+- **Task Counts**: Header shows count of tasks in each column
+- **Synced Data**: Changes sync back to the main todo list automatically
+- **Responsive Design**: Collapses to single column on mobile devices
+
 ### 📁 Markdown Visualizer
 - **Dual-Pane Interface**: Input on left, live preview on right
 - **File Upload**: Drag-and-drop or click to browse for .md files
@@ -278,6 +289,9 @@ todo-list/
 │   │   ├── DueDatePicker.tsx    # Due date selection dropdown
 │   │   ├── DueDateSummary.tsx   # Summary bar for due date statuses
 │   │   ├── FocusMode.tsx        # Full-screen focus view
+│   │   ├── KanbanBoard.tsx      # Kanban board with drag-drop columns
+│   │   ├── KanbanCard.tsx       # Individual Kanban task card
+│   │   ├── KanbanColumn.tsx     # Kanban column (To Do, In Progress, Done)
 │   │   ├── ListCompletionRates.tsx  # Per-list completion stats
 │   │   ├── MarkdownInput.tsx    # Markdown input textarea
 │   │   ├── MarkdownPreview.tsx  # Markdown preview with HTML support
@@ -299,6 +313,7 @@ todo-list/
 │   │   └── useTaskNotifications.ts  # Task notification management
 │   │
 │   ├── pages/
+│   │   ├── KanbanBoardPage.tsx  # Kanban board view page
 │   │   └── MarkdownVisualizerPage.tsx  # Markdown file preview page
 │   │
 │   ├── types/
@@ -632,6 +647,7 @@ Contributions are welcome! Here are some ideas:
 - [ ] Recurring tasks
 
 ### Recently Implemented
+- [x] Kanban Board view with drag-and-drop columns
 - [x] Add to Calendar (Google Calendar + ICS download)
 - [x] HTML support in Markdown Visualizer (GitHub-style)
 - [x] Task Notifications with reminders
