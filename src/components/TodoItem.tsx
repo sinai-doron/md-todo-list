@@ -220,6 +220,24 @@ const DeleteButton = styled(ActionButton)`
   }
 `;
 
+const StatusBadge = styled.span<{ $status: 'in-progress' | 'done' }>`
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 2px 8px;
+  border-radius: 12px;
+  font-size: 11px;
+  font-weight: 500;
+  white-space: nowrap;
+  background: ${props => props.$status === 'in-progress' ? '#e3f2fd' : '#e8f5e9'};
+  color: ${props => props.$status === 'in-progress' ? '#1565c0' : '#2e7d32'};
+  border: 1px solid ${props => props.$status === 'in-progress' ? '#90caf9' : '#a5d6a7'};
+
+  .material-symbols-outlined {
+    font-size: 14px;
+  }
+`;
+
 interface TodoItemProps {
   task: Task;
   onToggle: (id: string) => void;
@@ -423,6 +441,12 @@ export const TodoItem: React.FC<TodoItemProps> = ({
             >
               {linkifyText(task.text)}
             </TextDisplay>
+          )}
+          {!task.isHeader && task.status === 'in-progress' && !task.completed && (
+            <StatusBadge $status="in-progress">
+              <span className="material-symbols-outlined">pending</span>
+              In Progress
+            </StatusBadge>
           )}
           {!task.isHeader && onUpdateRecurrence && (
             <RecurrenceIndicator

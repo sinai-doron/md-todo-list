@@ -8,6 +8,7 @@ import { Sidebar } from './components/Sidebar';
 import { MarkdownVisualizerPage } from './pages/MarkdownVisualizerPage';
 import { KanbanBoardPage } from './pages/KanbanBoardPage';
 import { HabitsPage } from './pages/HabitsPage';
+import { ITToolsPage } from './pages/ITToolsPage';
 import { ProductivityDashboard } from './components/ProductivityDashboard';
 import { NotificationSettings } from './components/NotificationSettings';
 import { SEO } from './components/SEO';
@@ -1092,6 +1093,14 @@ function TodoApp() {
               <span className="material-symbols-outlined">preview</span>
               Markdown Visualizer
             </VisualizerButton>
+            <VisualizerButton
+              onClick={() => {
+                navigate('/it-tools');
+              }}
+            >
+              <span className="material-symbols-outlined">build</span>
+              IT Tools
+            </VisualizerButton>
           </HeaderActions>
         </Header>
         <ContentContainer>
@@ -1194,6 +1203,8 @@ function AppRoutes() {
       <Route path="/visualizer" element={<MarkdownVisualizerPage />} />
       <Route path="/kanban" element={<KanbanBoardPage />} />
       <Route path="/habits" element={<HabitsPage />} />
+      <Route path="/it-tools" element={<ITToolsPage />} />
+      <Route path="/it-tools/:toolId" element={<ITToolsPage />} />
     </Routes>
   );
 }
