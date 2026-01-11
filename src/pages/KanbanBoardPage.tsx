@@ -153,12 +153,38 @@ export const KanbanBoardPage: React.FC = () => {
   const [currentListId, setCurrentListId] = useState<string | null>(null);
   const { recordTaskCompletion, recordTaskUncompletion } = useProductivityStats();
 
-  // Load lists on mount
-  useEffect(() => {
+  // Load lists from storage
+  const loadData = useCallback(() => {
     const storedData = loadAllLists();
     setLists(storedData.lists);
     setCurrentListId(storedData.currentListId);
   }, []);
+
+  // Load lists on mount
+  useEffect(() => {
+    loadData();
+  }, [loadData]);
+
+  // Reload data when page becomes visible (handles tab switching and navigation)
+  useEffect(() => {
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === 'visible') {
+        loadData();
+      }
+    };
+
+    const handleFocus = () => {
+      loadData();
+    };
+
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+    window.addEventListener('focus', handleFocus);
+
+    return () => {
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+      window.removeEventListener('focus', handleFocus);
+    };
+  }, [loadData]);
 
   const currentList = currentListId ? lists[currentListId] : null;
 

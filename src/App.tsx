@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import { BrowserRouter, Routes, Route, useNavigate } from 'react-router-dom';
 import { usePageTracking } from './hooks/useAnalytics';
 import styled from 'styled-components';
@@ -309,6 +309,15 @@ function TodoApp() {
         clearTimeout(saveTimer.current);
       }
     };
+  }, [lists, currentListId]);
+
+  // Flush save immediately (used before navigation)
+  const flushSave = useCallback(() => {
+    if (saveTimer.current) {
+      clearTimeout(saveTimer.current);
+      saveTimer.current = null;
+    }
+    saveAllLists({ lists, currentListId });
   }, [lists, currentListId]);
 
   // Sync markdown → tasks for current list (with debouncing)
@@ -1056,6 +1065,7 @@ function TodoApp() {
             </VisualizerButton>
             <VisualizerButton
               onClick={() => {
+                flushSave(); // Save immediately before navigating
                 trackKanbanOpened();
                 navigate('/kanban');
               }}
@@ -1065,6 +1075,7 @@ function TodoApp() {
             </VisualizerButton>
             <VisualizerButton
               onClick={() => {
+                flushSave(); // Save immediately before navigating
                 trackHabitsOpened();
                 navigate('/habits');
               }}
