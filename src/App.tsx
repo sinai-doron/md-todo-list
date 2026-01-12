@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, useCallback } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { BrowserRouter, Routes, Route, useNavigate } from 'react-router-dom';
 import { usePageTracking } from './hooks/useAnalytics';
 import styled from 'styled-components';
@@ -9,6 +9,7 @@ import { MarkdownVisualizerPage } from './pages/MarkdownVisualizerPage';
 import { KanbanBoardPage } from './pages/KanbanBoardPage';
 import { HabitsPage } from './pages/HabitsPage';
 import { ITToolsPage } from './pages/ITToolsPage';
+import { LandingPage } from './pages/LandingPage';
 import { ProductivityDashboard } from './components/ProductivityDashboard';
 import { NotificationSettings } from './components/NotificationSettings';
 import { SEO } from './components/SEO';
@@ -45,183 +46,117 @@ import {
   trackEditorToggled,
   trackHideCompletedToggled,
   trackSearchUsed,
-  trackMarkdownVisualizerOpened,
-  trackKanbanOpened,
-  trackHabitsOpened,
 } from './utils/analytics';
 
-const AppContainer = styled.div`
+const PageContainer = styled.div`
   min-height: 100vh;
-  background-image: url('/forest-road.jpg');
-  background-size: cover;
-  background-position: center;
-  background-attachment: fixed;
-  background-repeat: no-repeat;
-  padding: 40px 20px;
-  position: relative;
-
-  &::before {
-    content: '';
-    position: absolute;
-    top: 0;
-    left: 0;
-    right: 0;
-    bottom: 0;
-    background: rgba(0, 0, 0, 0.4);
-    z-index: 0;
-  }
-`;
-
-const MainWrapper = styled.div`
-  max-width: 1200px;
-  margin: 0 auto;
-  position: relative;
-  z-index: 1;
+  background: #f5f5f5;
+  display: flex;
+  flex-direction: column;
 `;
 
 const Header = styled.header`
-  text-align: center;
-  margin-bottom: 40px;
-  color: white;
+  background: white;
+  border-bottom: 1px solid #e0e0e0;
+  padding: 16px 24px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-shrink: 0;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+`;
+
+const HeaderLeft = styled.div`
+  display: flex;
+  align-items: center;
+  gap: 16px;
+`;
+
+const BackButton = styled.button`
+  background: none;
+  border: none;
+  font-size: 24px;
+  color: #666;
+  cursor: pointer;
+  padding: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  transition: all 0.2s;
+
+  &:hover {
+    background: #f0f0f0;
+    color: #333;
+  }
 `;
 
 const Title = styled.h1`
-  margin: 0 0 8px 0;
-  font-size: 36px;
-  font-weight: 600;
-`;
-
-const Subtitle = styled.p`
   margin: 0;
-  font-size: 16px;
-  opacity: 0.9;
-`;
-
-const HeaderActions = styled.div`
+  font-size: 24px;
+  font-weight: 600;
+  color: #333;
   display: flex;
-  justify-content: center;
-  gap: 12px;
-  margin-top: 20px;
+  align-items: center;
+  gap: 10px;
+
+  .material-symbols-outlined {
+    color: #6200ee;
+  }
 `;
 
-const VisualizerButton = styled.button`
+const HeaderRight = styled.div`
   display: flex;
   align-items: center;
   gap: 8px;
-  background: rgba(255, 255, 255, 0.15);
-  backdrop-filter: blur(8px);
-  color: white;
-  border: 1px solid rgba(255, 255, 255, 0.3);
-  padding: 12px 24px;
+`;
+
+const HeaderButton = styled.button`
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 12px;
+  background: transparent;
+  border: 1px solid #e0e0e0;
   border-radius: 8px;
-  font-size: 15px;
-  font-weight: 500;
+  font-size: 13px;
+  color: #666;
   cursor: pointer;
-  transition: all 0.2s ease;
+  transition: all 0.2s;
 
   &:hover {
-    background: rgba(255, 255, 255, 0.25);
-    border-color: rgba(255, 255, 255, 0.5);
-    transform: translateY(-2px);
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
-  }
-
-  &:active {
-    transform: translateY(0);
+    background: #f5f5f5;
+    border-color: #6200ee;
+    color: #6200ee;
   }
 
   .material-symbols-outlined {
-    font-size: 20px;
+    font-size: 18px;
   }
 `;
 
-const ContentContainer = styled.div`
+const MainContent = styled.main`
+  flex: 1;
   display: flex;
-  gap: 20px;
-  align-items: flex-start;
+  overflow: hidden;
+  padding: 16px;
+  gap: 16px;
 
   @media (max-width: 768px) {
     flex-direction: column;
+    padding: 12px;
   }
 `;
 
 const ContentWrapper = styled.div`
   flex: 1;
   min-width: 0;
-`;
-
-const Attribution = styled.a`
-  position: fixed;
-  bottom: 16px;
-  left: 16px;
-  background: rgba(0, 0, 0, 0.6);
-  backdrop-filter: blur(8px);
-  color: white;
-  padding: 8px 12px;
-  border-radius: 6px;
-  font-size: 12px;
-  text-decoration: none;
-  z-index: 1000;
-  transition: all 0.2s ease;
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  
-  &:hover {
-    background: rgba(0, 0, 0, 0.8);
-    transform: translateY(-2px);
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
-  }
-
-  @media (max-width: 768px) {
-    font-size: 11px;
-    padding: 6px 10px;
-    bottom: 12px;
-    left: 12px;
-  }
-`;
-
-const GitHubLink = styled.a`
-  position: fixed;
-  top: 20px;
-  right: 20px;
-  background: rgba(0, 0, 0, 0.6);
-  backdrop-filter: blur(8px);
-  color: white;
-  padding: 12px;
-  border-radius: 50%;
-  text-decoration: none;
-  z-index: 1000;
-  transition: all 0.2s ease;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 48px;
-  height: 48px;
-  
-  &:hover {
-    background: rgba(0, 0, 0, 0.8);
-    transform: translateY(-2px) rotate(360deg);
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
-  }
-
-  svg {
-    width: 24px;
-    height: 24px;
-    fill: currentColor;
-  }
-
-  @media (max-width: 768px) {
-    width: 40px;
-    height: 40px;
-    top: 16px;
-    right: 16px;
-    
-    svg {
-      width: 20px;
-      height: 20px;
-    }
-  }
+  min-height: 0;
+  overflow-y: auto;
+  background: white;
+  border-radius: 12px;
+  padding: 20px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
 `;
 
 function TodoApp() {
@@ -310,15 +245,6 @@ function TodoApp() {
         clearTimeout(saveTimer.current);
       }
     };
-  }, [lists, currentListId]);
-
-  // Flush save immediately (used before navigation)
-  const flushSave = useCallback(() => {
-    if (saveTimer.current) {
-      clearTimeout(saveTimer.current);
-      saveTimer.current = null;
-    }
-    saveAllLists({ lists, currentListId });
   }, [lists, currentListId]);
 
   // Sync markdown → tasks for current list (with debouncing)
@@ -1044,67 +970,36 @@ function TodoApp() {
   }
 
   return (
-    <AppContainer>
+    <PageContainer>
       <SEO
         title="MD Tasks - Markdown Todo List Manager"
         description="Create and manage interactive task lists from markdown files. Convert MD files to todos, track progress, and boost productivity with our free online tool."
-        canonical="/"
+        canonical="/todo"
         keywords="md tasks, markdown todo list, task manager, markdown tasks, productivity tool"
       />
-      <MainWrapper>
-        <Header>
-          <Title>Markdown Todo List</Title>
-          <Subtitle>Transform your markdown into an interactive todo list</Subtitle>
-          <HeaderActions>
-            <VisualizerButton onClick={() => setIsDashboardOpen(true)}>
-              <span className="material-symbols-outlined">insights</span>
-              Productivity
-            </VisualizerButton>
-            <VisualizerButton onClick={() => setIsNotificationSettingsOpen(true)}>
-              <span className="material-symbols-outlined">notifications</span>
-              Notifications
-            </VisualizerButton>
-            <VisualizerButton
-              onClick={() => {
-                flushSave(); // Save immediately before navigating
-                trackKanbanOpened();
-                navigate('/kanban');
-              }}
-            >
-              <span className="material-symbols-outlined">view_kanban</span>
-              Kanban Board
-            </VisualizerButton>
-            <VisualizerButton
-              onClick={() => {
-                flushSave(); // Save immediately before navigating
-                trackHabitsOpened();
-                navigate('/habits');
-              }}
-            >
-              <span className="material-symbols-outlined">local_fire_department</span>
-              Habits
-            </VisualizerButton>
-            <VisualizerButton
-              onClick={() => {
-                trackMarkdownVisualizerOpened();
-                navigate('/visualizer');
-              }}
-            >
-              <span className="material-symbols-outlined">preview</span>
-              Markdown Visualizer
-            </VisualizerButton>
-            <VisualizerButton
-              onClick={() => {
-                navigate('/it-tools');
-              }}
-            >
-              <span className="material-symbols-outlined">build</span>
-              IT Tools
-            </VisualizerButton>
-          </HeaderActions>
-        </Header>
-        <ContentContainer>
-          <Sidebar
+      <Header>
+        <HeaderLeft>
+          <BackButton onClick={() => navigate('/')} title="Back to Home">
+            <span className="material-symbols-outlined">arrow_back</span>
+          </BackButton>
+          <Title>
+            <span className="material-symbols-outlined">checklist</span>
+            Todo Lists
+          </Title>
+        </HeaderLeft>
+        <HeaderRight>
+          <HeaderButton onClick={() => setIsDashboardOpen(true)}>
+            <span className="material-symbols-outlined">insights</span>
+            Productivity
+          </HeaderButton>
+          <HeaderButton onClick={() => setIsNotificationSettingsOpen(true)}>
+            <span className="material-symbols-outlined">notifications</span>
+            Notifications
+          </HeaderButton>
+        </HeaderRight>
+      </Header>
+      <MainContent>
+        <Sidebar
             lists={lists}
             currentListId={currentListId}
             onCreateList={handleCreateList}
@@ -1149,27 +1044,7 @@ function TodoApp() {
               </>
             )}
           </ContentWrapper>
-        </ContentContainer>
-      </MainWrapper>
-      <GitHubLink
-        href="https://github.com/sinai-doron/md-todo-list"
-        target="_blank"
-        rel="noopener noreferrer"
-        title="View on GitHub"
-      >
-        <svg viewBox="0 0 16 16" xmlns="http://www.w3.org/2000/svg">
-          <path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.013 8.013 0 0016 8c0-4.42-3.58-8-8-8z"/>
-        </svg>
-      </GitHubLink>
-      <Attribution
-        href="https://unsplash.com/@heytowner?utm_source=todo-app&utm_medium=referral"
-        target="_blank"
-        rel="noopener noreferrer"
-        title="Photo by John Towner on Unsplash"
-      >
-
-        Image by <span>John Towner</span>
-      </Attribution>
+        </MainContent>
 
       {isDashboardOpen && (
         <ProductivityDashboard
@@ -1190,7 +1065,7 @@ function TodoApp() {
           onClose={() => setIsNotificationSettingsOpen(false)}
         />
       )}
-    </AppContainer>
+    </PageContainer>
   );
 }
 
@@ -1199,7 +1074,8 @@ function AppRoutes() {
 
   return (
     <Routes>
-      <Route path="/" element={<TodoApp />} />
+      <Route path="/" element={<LandingPage />} />
+      <Route path="/todo" element={<TodoApp />} />
       <Route path="/visualizer" element={<MarkdownVisualizerPage />} />
       <Route path="/kanban" element={<KanbanBoardPage />} />
       <Route path="/habits" element={<HabitsPage />} />

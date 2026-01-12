@@ -1,6 +1,6 @@
-import React, { useMemo } from 'react';
+import React, { useMemo, useState } from 'react';
 import styled from 'styled-components';
-import type { ITTool, ToolCategoryInfo } from '../../types/ITTool';
+import type { ITTool, ToolCategoryInfo, ToolCategory } from '../../types/ITTool';
 import { tools, getActiveCategories, getToolsByCategory } from './tools';
 
 const SidebarContainer = styled.div`
@@ -9,7 +9,7 @@ const SidebarContainer = styled.div`
   border-right: 1px solid #e0e0e0;
   display: flex;
   flex-direction: column;
-  height: 100%;
+  min-height: 0; /* Allow flex item to shrink for scrolling */
   overflow: hidden;
 
   @media (max-width: 768px) {
@@ -71,7 +71,7 @@ const CategorySection = styled.div`
   margin-bottom: 8px;
 `;
 
-const CategoryHeader = styled.div`
+const CategoryHeader = styled.button`
   display: flex;
   align-items: center;
   gap: 8px;
@@ -81,10 +81,38 @@ const CategoryHeader = styled.div`
   color: #666;
   text-transform: uppercase;
   letter-spacing: 0.5px;
+  background: none;
+  border: none;
+  width: 100%;
+  cursor: pointer;
+  transition: all 0.15s;
+
+  &:hover {
+    background: #f0f0f0;
+    color: #333;
+  }
 
   .material-symbols-outlined {
     font-size: 16px;
   }
+`;
+
+const CategoryIcon = styled.span`
+  flex: 1;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+`;
+
+const CollapseIcon = styled.span<{ $collapsed: boolean }>`
+  font-size: 18px !important;
+  color: #999;
+  transition: transform 0.2s;
+  transform: rotate(${props => props.$collapsed ? '0deg' : '90deg'});
+`;
+
+const CategoryTools = styled.div<{ $collapsed: boolean }>`
+  display: ${props => props.$collapsed ? 'none' : 'block'};
 `;
 
 const ToolItem = styled.button<{ $active: boolean }>`
@@ -155,6 +183,19 @@ export const ToolsSidebar: React.FC<ToolsSidebarProps> = ({
   searchQuery = '',
 }) => {
   const activeCategories = useMemo(() => getActiveCategories(), []);
+  const [collapsedCategories, setCollapsedCategories] = useState<Set<ToolCategory>>(new Set());
+
+  const toggleCategory = (categoryId: ToolCategory) => {
+    setCollapsedCategories(prev => {
+      const next = new Set(prev);
+      if (next.has(categoryId)) {
+        next.delete(categoryId);
+      } else {
+        next.add(categoryId);
+      }
+      return next;
+    });
+  };
 
   const filteredTools = useMemo(() => {
     if (!searchQuery.trim()) return null;
@@ -206,13 +247,22 @@ export const ToolsSidebar: React.FC<ToolsSidebarProps> = ({
             const categoryTools = getToolsByCategory(category.id);
             if (categoryTools.length === 0) return null;
 
+            const isCollapsed = collapsedCategories.has(category.id);
+
             return (
               <CategorySection key={category.id}>
-                <CategoryHeader>
-                  <span className="material-symbols-outlined">{category.icon}</span>
-                  {category.name}
+                <CategoryHeader onClick={() => toggleCategory(category.id)}>
+                  <CategoryIcon>
+                    <span className="material-symbols-outlined">{category.icon}</span>
+                    {category.name}
+                  </CategoryIcon>
+                  <CollapseIcon $collapsed={isCollapsed} className="material-symbols-outlined">
+                    keyboard_arrow_right
+                  </CollapseIcon>
                 </CategoryHeader>
-                {categoryTools.map(renderToolItem)}
+                <CategoryTools $collapsed={isCollapsed}>
+                  {categoryTools.map(renderToolItem)}
+                </CategoryTools>
               </CategorySection>
             );
           })

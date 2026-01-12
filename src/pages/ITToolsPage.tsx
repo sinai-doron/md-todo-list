@@ -7,10 +7,11 @@ import { CommandPalette } from '../components/it-tools/CommandPalette';
 import { getToolById } from '../components/it-tools/tools';
 
 const PageContainer = styled.div`
-  min-height: 100vh;
+  height: 100vh;
   background: #f5f5f5;
   display: flex;
   flex-direction: column;
+  overflow: hidden;
 `;
 
 const Header = styled.header`
@@ -106,6 +107,7 @@ const MainContent = styled.main`
   flex: 1;
   display: flex;
   overflow: hidden;
+  min-height: 0; /* Critical for flex children to respect overflow */
 
   @media (max-width: 768px) {
     flex-direction: column;
@@ -121,6 +123,7 @@ const ToolContent = styled.div`
   margin-left: 0;
   border-radius: 12px;
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
+  min-height: 0; /* Allow flex item to shrink for scrolling */
 
   @media (max-width: 768px) {
     margin: 16px;
