@@ -21,6 +21,16 @@ import { LoremIpsumTool } from './LoremIpsumTool';
 import { CaseConverterTool } from './CaseConverterTool';
 import { NumberBaseConverterTool } from './NumberBaseConverterTool';
 import { PasswordGeneratorTool } from './PasswordGeneratorTool';
+import { HTMLEntityTool } from './HTMLEntityTool';
+import { SlugGeneratorTool } from './SlugGeneratorTool';
+import { WordCounterTool } from './WordCounterTool';
+import { QRCodeTool } from './QRCodeTool';
+import { CronParserTool } from './CronParserTool';
+import { ByteCalculatorTool } from './ByteCalculatorTool';
+import { YAMLJSONTool } from './YAMLJSONTool';
+import { IPAddressTool } from './IPAddressTool';
+import { MarkdownPreviewTool } from './MarkdownPreviewTool';
+import { SQLFormatterTool } from './SQLFormatterTool';
 import type { ITTool, ToolCategory, ToolCategoryInfo } from '../../../types/ITTool';
 
 // Category definitions
@@ -160,6 +170,96 @@ export const tools: ITTool[] = [
     category: 'generators',
     keywords: ['password', 'generate', 'random', 'secure', 'strong', 'secret'],
     component: PasswordGeneratorTool,
+  },
+  {
+    id: 'html-entity',
+    name: 'HTML Entity Encoder',
+    description: 'Encode and decode HTML entities',
+    icon: 'code',
+    category: 'encoding',
+    keywords: ['html', 'entity', 'encode', 'decode', 'escape', 'special', 'characters'],
+    component: HTMLEntityTool,
+  },
+  {
+    id: 'slug-generator',
+    name: 'Slug Generator',
+    description: 'Convert text into URL-friendly slugs',
+    icon: 'link',
+    category: 'generators',
+    keywords: ['slug', 'url', 'seo', 'friendly', 'permalink', 'convert'],
+    component: SlugGeneratorTool,
+  },
+  {
+    id: 'word-counter',
+    name: 'Word & Character Counter',
+    description: 'Count words, characters, sentences, and reading time',
+    icon: 'text_fields',
+    category: 'formatting',
+    keywords: ['word', 'count', 'character', 'text', 'length', 'reading', 'time'],
+    component: WordCounterTool,
+  },
+  {
+    id: 'qr-code',
+    name: 'QR Code Generator',
+    description: 'Generate QR codes for URLs, text, and more',
+    icon: 'qr_code_2',
+    category: 'generators',
+    keywords: ['qr', 'code', 'generate', 'barcode', 'scan', 'url'],
+    component: QRCodeTool,
+  },
+  {
+    id: 'cron-parser',
+    name: 'Cron Parser',
+    description: 'Parse and explain cron expressions',
+    icon: 'schedule',
+    category: 'validators',
+    keywords: ['cron', 'schedule', 'parse', 'job', 'timer', 'expression'],
+    component: CronParserTool,
+  },
+  {
+    id: 'byte-calculator',
+    name: 'Byte Size Calculator',
+    description: 'Convert between bytes, KB, MB, GB, TB, and more',
+    icon: 'storage',
+    category: 'conversion',
+    keywords: ['byte', 'size', 'convert', 'kb', 'mb', 'gb', 'tb', 'storage', 'file'],
+    component: ByteCalculatorTool,
+  },
+  {
+    id: 'yaml-json',
+    name: 'YAML ↔ JSON Converter',
+    description: 'Convert between YAML and JSON formats',
+    icon: 'swap_horiz',
+    category: 'conversion',
+    keywords: ['yaml', 'json', 'convert', 'config', 'format', 'data'],
+    component: YAMLJSONTool,
+  },
+  {
+    id: 'ip-address',
+    name: 'IP Address Analyzer',
+    description: 'Analyze IPv4 addresses, subnets, and CIDR notation',
+    icon: 'router',
+    category: 'validators',
+    keywords: ['ip', 'address', 'subnet', 'cidr', 'network', 'ipv4', 'mask'],
+    component: IPAddressTool,
+  },
+  {
+    id: 'markdown-preview',
+    name: 'Markdown Preview',
+    description: 'Write markdown and preview the rendered output',
+    icon: 'preview',
+    category: 'formatting',
+    keywords: ['markdown', 'preview', 'md', 'render', 'editor', 'text'],
+    component: MarkdownPreviewTool,
+  },
+  {
+    id: 'sql-formatter',
+    name: 'SQL Formatter',
+    description: 'Format and beautify SQL queries',
+    icon: 'database',
+    category: 'formatting',
+    keywords: ['sql', 'format', 'query', 'beautify', 'database', 'prettify'],
+    component: SQLFormatterTool,
   },
 ];
 

@@ -10,6 +10,7 @@ import { KanbanBoardPage } from './pages/KanbanBoardPage';
 import { HabitsPage } from './pages/HabitsPage';
 import { ITToolsPage } from './pages/ITToolsPage';
 import { LandingPage } from './pages/LandingPage';
+import { CalendarPage } from './pages/CalendarPage';
 import { ProductivityDashboard } from './components/ProductivityDashboard';
 import { NotificationSettings } from './components/NotificationSettings';
 import { SEO } from './components/SEO';
@@ -988,6 +989,10 @@ function TodoApp() {
           </Title>
         </HeaderLeft>
         <HeaderRight>
+          <HeaderButton onClick={() => navigate('/calendar')}>
+            <span className="material-symbols-outlined">calendar_month</span>
+            Calendar
+          </HeaderButton>
           <HeaderButton onClick={() => setIsDashboardOpen(true)}>
             <span className="material-symbols-outlined">insights</span>
             Productivity
@@ -1040,6 +1045,8 @@ function TodoApp() {
                   onQuickAddTask={handleQuickAddTask}
                   onUpdateDueDate={handleUpdateDueDate}
                   onUpdateRecurrence={handleUpdateRecurrence}
+                  allLists={lists}
+                  currentListId={currentListId ?? undefined}
                 />
               </>
             )}
@@ -1076,6 +1083,7 @@ function AppRoutes() {
     <Routes>
       <Route path="/" element={<LandingPage />} />
       <Route path="/todo" element={<TodoApp />} />
+      <Route path="/calendar" element={<CalendarPage />} />
       <Route path="/visualizer" element={<MarkdownVisualizerPage />} />
       <Route path="/kanban" element={<KanbanBoardPage />} />
       <Route path="/habits" element={<HabitsPage />} />

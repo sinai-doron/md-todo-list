@@ -223,6 +223,14 @@ const categories: Category[] = [
         color: '#6200ee',
       },
       {
+        id: 'calendar',
+        name: 'Calendar',
+        icon: 'calendar_month',
+        description: 'View your tasks by day, week, or month',
+        path: '/calendar',
+        color: '#d81b60',
+      },
+      {
         id: 'kanban',
         name: 'Kanban Board',
         icon: 'view_kanban',
@@ -250,7 +258,7 @@ const categories: Category[] = [
         description: 'Developer utilities for everyday tasks',
         path: '/it-tools',
         color: '#1565c0',
-        badge: '14 tools',
+        badge: '24 tools',
       },
       {
         id: 'visualizer',

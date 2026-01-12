@@ -1,12 +1,15 @@
 import React, { useState } from 'react';
 import styled from 'styled-components';
 import type { Task, RecurrenceRule } from '../types/Task';
+import type { TodoList as TodoListType } from '../types/TodoList';
+import type { CalendarViewMode, CalendarTask } from '../types/Calendar';
 import { TodoItem } from './TodoItem';
 import { AddTasksModal } from './AddTasksModal';
 import { QuickTaskInput } from './QuickTaskInput';
 import { FocusMode } from './FocusMode';
 import { DueDateSummary, type DueDateFilter } from './DueDateSummary';
 import { getDateStatus } from './DueDatePicker';
+import { CalendarView } from './calendar/CalendarView';
 
 const Container = styled.div`
   background: white;
@@ -408,6 +411,54 @@ const GroupedTasksContainer = styled.div`
   margin-bottom: 8px;
 `;
 
+// View Toggle Styles
+const ViewToggleContainer = styled.div`
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  background: #f5f5f5;
+  border-radius: 8px;
+  padding: 4px;
+`;
+
+const ViewToggleButton = styled.button<{ $active: boolean }>`
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 6px 12px;
+  border: none;
+  border-radius: 6px;
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s;
+  background: ${props => props.$active ? 'white' : 'transparent'};
+  color: ${props => props.$active ? '#6200ee' : '#666'};
+  box-shadow: ${props => props.$active ? '0 1px 3px rgba(0,0,0,0.1)' : 'none'};
+
+  .material-symbols-outlined {
+    font-size: 18px;
+  }
+
+  &:hover {
+    background: ${props => props.$active ? 'white' : 'rgba(255,255,255,0.5)'};
+    color: ${props => props.$active ? '#6200ee' : '#333'};
+  }
+
+  @media (max-width: 768px) {
+    padding: 6px 8px;
+    font-size: 12px;
+
+    span:not(.material-symbols-outlined) {
+      display: none;
+    }
+  }
+`;
+
+const CalendarContainer = styled.div`
+  margin-top: 16px;
+`;
+
 interface TodoListProps {
   tasks: Task[];
   listName: string;
@@ -431,6 +482,9 @@ interface TodoListProps {
   onQuickAddTask: (text: string) => void;
   onUpdateDueDate: (id: string, dueDate: string | undefined) => void;
   onUpdateRecurrence: (id: string, recurrence: RecurrenceRule | undefined) => void;
+  // Calendar view props
+  allLists?: { [listId: string]: TodoListType };
+  currentListId?: string;
 }
 
 export const TodoList: React.FC<TodoListProps> = ({
@@ -456,6 +510,8 @@ export const TodoList: React.FC<TodoListProps> = ({
   onQuickAddTask,
   onUpdateDueDate,
   onUpdateRecurrence,
+  allLists,
+  currentListId,
 }) => {
   const [collapsedSections, setCollapsedSections] = useState<Set<string>>(new Set());
   const [isSpeedDialOpen, setIsSpeedDialOpen] = useState(false);
@@ -465,6 +521,7 @@ export const TodoList: React.FC<TodoListProps> = ({
   const [isSearchOpen, setIsSearchOpen] = useState(false);
   const [focusedTaskId, setFocusedTaskId] = useState<string | null>(null);
   const [dueDateFilter, setDueDateFilter] = useState<DueDateFilter>(null);
+  const [calendarView, setCalendarView] = useState<CalendarViewMode>('list');
 
   const countTasks = (taskList: Task[]): { total: number; completed: number } => {
     let total = 0;
@@ -738,6 +795,47 @@ export const TodoList: React.FC<TodoListProps> = ({
 
   const focusedTask = getTaskById(focusedTaskId);
 
+  // Handler for navigating to a task from calendar view
+  const handleNavigateToTask = (task: CalendarTask) => {
+    // Switch back to list view and focus the task
+    setCalendarView('list');
+    setFocusedTaskId(task.id);
+  };
+
+  // Render the view toggle component
+  const renderViewToggle = () => (
+    <ViewToggleContainer>
+      <ViewToggleButton
+        $active={calendarView === 'list'}
+        onClick={() => setCalendarView('list')}
+      >
+        <span className="material-symbols-outlined">list</span>
+        <span>List</span>
+      </ViewToggleButton>
+      <ViewToggleButton
+        $active={calendarView === 'month'}
+        onClick={() => setCalendarView('month')}
+      >
+        <span className="material-symbols-outlined">calendar_view_month</span>
+        <span>Month</span>
+      </ViewToggleButton>
+      <ViewToggleButton
+        $active={calendarView === 'week'}
+        onClick={() => setCalendarView('week')}
+      >
+        <span className="material-symbols-outlined">calendar_view_week</span>
+        <span>Week</span>
+      </ViewToggleButton>
+      <ViewToggleButton
+        $active={calendarView === 'day'}
+        onClick={() => setCalendarView('day')}
+      >
+        <span className="material-symbols-outlined">calendar_today</span>
+        <span>Day</span>
+      </ViewToggleButton>
+    </ViewToggleContainer>
+  );
+
   // Recursive render function to properly handle collapsed state at all levels
   const renderTask = (task: Task): React.ReactNode => (
     <TodoItem
@@ -825,6 +923,7 @@ export const TodoList: React.FC<TodoListProps> = ({
                 </>
               )}
             </ToolbarSection>
+            {renderViewToggle()}
             <ToolbarSection>
               <OverflowMenuContainer data-overflow>
                 <IconButton
@@ -846,9 +945,23 @@ export const TodoList: React.FC<TodoListProps> = ({
               </OverflowMenuContainer>
             </ToolbarSection>
           </MaterialToolbar>
-          <EmptyState>
-            No tasks yet. Paste markdown above, add a section, or add a task to get started!
-          </EmptyState>
+          {calendarView === 'list' ? (
+            <EmptyState>
+              No tasks yet. Paste markdown above, add a section, or add a task to get started!
+            </EmptyState>
+          ) : (
+            <CalendarContainer>
+              <CalendarView
+                tasks={tasks}
+                allLists={allLists}
+                currentListId={currentListId}
+                currentListName={listName}
+                viewMode={calendarView}
+                onViewChange={setCalendarView}
+                onNavigateToTask={handleNavigateToTask}
+              />
+            </CalendarContainer>
+          )}
         </Container>
         <SpeedDialContainer data-speed-dial>
           <SpeedDialBackdrop 
@@ -984,6 +1097,7 @@ export const TodoList: React.FC<TodoListProps> = ({
                 </>
               )}
             </ToolbarSection>
+            {renderViewToggle()}
           <ToolbarSection>
             <OverflowMenuContainer data-overflow>
               <IconButton
@@ -1005,7 +1119,19 @@ export const TodoList: React.FC<TodoListProps> = ({
             </OverflowMenuContainer>
           </ToolbarSection>
         </MaterialToolbar>
-        {hasSearchQuery && displayedTasks.length === 0 ? (
+        {calendarView !== 'list' ? (
+          <CalendarContainer>
+            <CalendarView
+              tasks={tasks}
+              allLists={allLists}
+              currentListId={currentListId}
+              currentListName={listName}
+              viewMode={calendarView}
+              onViewChange={setCalendarView}
+              onNavigateToTask={handleNavigateToTask}
+            />
+          </CalendarContainer>
+        ) : hasSearchQuery && displayedTasks.length === 0 ? (
           <SearchResultInfo>
             No tasks found matching "{searchQuery}"
           </SearchResultInfo>
