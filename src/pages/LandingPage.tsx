@@ -1,6 +1,7 @@
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
 import styled from 'styled-components';
+import { SEO } from '../components/SEO';
 
 const PageContainer = styled.div`
   min-height: 100vh;
@@ -268,6 +269,12 @@ export const LandingPage: React.FC = () => {
 
   return (
     <PageContainer>
+      <SEO
+        title="CommandBoard - Your Productivity Toolkit"
+        description="Free online productivity suite with todo lists, kanban boards, habit tracking, and developer tools. Manage tasks with markdown, track habits, and boost your productivity."
+        canonical="/"
+        keywords="productivity tools, todo list, kanban board, habit tracker, developer tools, markdown tasks, task manager"
+      />
       <GitHubLink
         href="https://github.com/nicholaschen09/todo-list"
         target="_blank"
