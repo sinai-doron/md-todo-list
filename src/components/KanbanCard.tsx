@@ -2,10 +2,11 @@ import React from 'react';
 import styled from 'styled-components';
 import { useSortable } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
-import type { Task } from '../types/Task';
+import type { Task, Priority } from '../types/Task';
 import { countSubtasks } from '../types/Task';
+import { getPriorityColor } from './PriorityPicker';
 
-const CardContainer = styled.div<{ $isDragging: boolean; $isOverdue: boolean; $isDueToday: boolean }>`
+const CardContainer = styled.div<{ $isDragging: boolean; $isOverdue: boolean; $isDueToday: boolean; $priorityColor?: string }>`
   background: white;
   border-radius: 8px;
   padding: 12px;
@@ -15,6 +16,8 @@ const CardContainer = styled.div<{ $isDragging: boolean; $isOverdue: boolean; $i
   cursor: grab;
   transition: box-shadow 0.2s, transform 0.2s;
   border-left: 3px solid ${props => {
+    // Priority takes precedence over due date for border color
+    if (props.$priorityColor && props.$priorityColor !== 'transparent') return props.$priorityColor;
     if (props.$isOverdue) return '#ef4444';
     if (props.$isDueToday) return '#f97316';
     return 'transparent';
@@ -117,6 +120,41 @@ const ProgressFill = styled.div<{ $percent: number }>`
   transition: width 0.3s;
 `;
 
+const PriorityBadge = styled.span<{ $priority: Priority }>`
+  font-size: 10px;
+  padding: 2px 6px;
+  border-radius: 4px;
+  font-weight: 500;
+  text-transform: uppercase;
+  background: ${props => {
+    switch (props.$priority) {
+      case 'high': return '#fef2f2';
+      case 'medium': return '#fff7ed';
+      case 'low': return '#eff6ff';
+      default: return '#f3f4f6';
+    }
+  }};
+  color: ${props => {
+    switch (props.$priority) {
+      case 'high': return '#dc2626';
+      case 'medium': return '#ea580c';
+      case 'low': return '#2563eb';
+      default: return '#6b7280';
+    }
+  }};
+`;
+
+const NotesBadge = styled.span`
+  font-size: 11px;
+  color: #6b7280;
+  display: flex;
+  align-items: center;
+
+  .material-symbols-outlined {
+    font-size: 14px;
+  }
+`;
+
 interface KanbanCardProps {
   task: Task;
 }
@@ -176,6 +214,7 @@ export const KanbanCard: React.FC<KanbanCardProps> = ({ task }) => {
   const subtaskCount = countSubtasks(task);
   const hasSubtasks = subtaskCount.total > 0;
   const subtaskPercent = hasSubtasks ? Math.round((subtaskCount.completed / subtaskCount.total) * 100) : 0;
+  const priorityColor = getPriorityColor(task.priority);
 
   return (
     <CardContainer
@@ -184,6 +223,7 @@ export const KanbanCard: React.FC<KanbanCardProps> = ({ task }) => {
       $isDragging={isDragging}
       $isOverdue={dueDateStatus === 'overdue'}
       $isDueToday={dueDateStatus === 'today'}
+      $priorityColor={priorityColor}
       {...attributes}
       {...listeners}
     >
@@ -191,6 +231,12 @@ export const KanbanCard: React.FC<KanbanCardProps> = ({ task }) => {
 
       <CardFooter>
         <BadgeContainer>
+          {task.priority && (
+            <PriorityBadge $priority={task.priority}>
+              {task.priority}
+            </PriorityBadge>
+          )}
+
           {dueDateStatus !== 'none' && (
             <DueDateBadge $status={dueDateStatus}>
               <span className="material-symbols-outlined">calendar_today</span>
@@ -203,6 +249,12 @@ export const KanbanCard: React.FC<KanbanCardProps> = ({ task }) => {
               <span className="material-symbols-outlined">checklist</span>
               {subtaskCount.completed}/{subtaskCount.total}
             </SubtaskBadge>
+          )}
+
+          {task.notes && (
+            <NotesBadge title="Has notes">
+              <span className="material-symbols-outlined">notes</span>
+            </NotesBadge>
           )}
         </BadgeContainer>
 

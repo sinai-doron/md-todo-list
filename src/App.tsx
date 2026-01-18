@@ -1,9 +1,12 @@
 import { useState, useEffect, useRef } from 'react';
 import { BrowserRouter, Routes, Route, useNavigate } from 'react-router-dom';
+import './i18n';
 import { usePageTracking } from './hooks/useAnalytics';
 import styled from 'styled-components';
 import { MarkdownInput } from './components/MarkdownInput';
 import { TodoList } from './components/TodoList';
+import { ExportModal } from './components/ExportModal';
+import { ImportJSONModal } from './components/ImportJSONModal';
 import { Sidebar } from './components/Sidebar';
 import { MarkdownVisualizerPage } from './pages/MarkdownVisualizerPage';
 import { KanbanBoardPage } from './pages/KanbanBoardPage';
@@ -11,18 +14,29 @@ import { HabitsPage } from './pages/HabitsPage';
 import { ITToolsPage } from './pages/ITToolsPage';
 import { LandingPage } from './pages/LandingPage';
 import { CalendarPage } from './pages/CalendarPage';
+import { RecipesPage } from './pages/RecipesPage';
+import { ShoppingListPage } from './pages/ShoppingListPage';
+import { MealPlanPage } from './pages/MealPlanPage';
 import { ProductivityDashboard } from './components/ProductivityDashboard';
 import { NotificationSettings } from './components/NotificationSettings';
 import { SEO } from './components/SEO';
-import type { Task, RecurrenceRule } from './types/Task';
+import type { Task, RecurrenceRule, Priority, TaskTag } from './types/Task';
 import type { TodoList as TodoListType } from './types/TodoList';
 import { parseMarkdownToTasks, mergeTasks } from './utils/markdownParser';
 import { exportTasksToMarkdown } from './utils/exportMarkdown';
 import { calculateNextDueDate, getTodayString } from './utils/recurrence';
+import type { ExportedList, ImportMode } from './types/Export';
+import {
+  mergeImportedTags,
+  updateTaskTagReferences,
+  regenerateTaskIds,
+} from './utils/importJSON';
 import {
   loadAllLists,
   saveAllLists,
   createNewList,
+  loadTags,
+  saveTags,
 } from './utils/storage';
 import { useProductivityStats } from './hooks/useProductivityStats';
 import { useTaskNotifications } from './hooks/useTaskNotifications';
@@ -170,6 +184,11 @@ function TodoApp() {
   const [searchQuery, setSearchQuery] = useState('');
   const [isDashboardOpen, setIsDashboardOpen] = useState(false);
   const [isNotificationSettingsOpen, setIsNotificationSettingsOpen] = useState(false);
+  const [isExportModalOpen, setIsExportModalOpen] = useState(false);
+  const [isImportJSONModalOpen, setIsImportJSONModalOpen] = useState(false);
+  const [importJSONContent, setImportJSONContent] = useState('');
+  const [importJSONFileName, setImportJSONFileName] = useState('');
+  const [globalTags, setGlobalTags] = useState<TaskTag[]>([]);
 
   // Productivity statistics
   const { stats, recordTaskCompletion, recordTaskUncompletion } = useProductivityStats();
@@ -210,7 +229,7 @@ function TodoApp() {
   // Load all lists from localStorage on mount
   useEffect(() => {
     const storedData = loadAllLists();
-    
+
     if (Object.keys(storedData.lists).length === 0) {
       // First time user - create a default list
       const defaultList = createNewList('My First List');
@@ -218,9 +237,14 @@ function TodoApp() {
       storedData.currentListId = defaultList.id;
       saveAllLists(storedData);
     }
-    
+
     setLists(storedData.lists);
     setCurrentListId(storedData.currentListId);
+
+    // Load global tags
+    const storedTags = loadTags();
+    setGlobalTags(storedTags);
+
     isInitialMount.current = false;
   }, []);
 
@@ -247,6 +271,12 @@ function TodoApp() {
       }
     };
   }, [lists, currentListId]);
+
+  // Save tags to localStorage when they change
+  useEffect(() => {
+    if (isInitialMount.current) return;
+    saveTags(globalTags);
+  }, [globalTags]);
 
   // Sync markdown → tasks for current list (with debouncing)
   useEffect(() => {
@@ -839,6 +869,71 @@ function TodoApp() {
     reader.readAsText(file);
   };
 
+  // Open JSON import modal
+  const handleOpenImportJSON = (content: string, fileName: string) => {
+    setImportJSONContent(content);
+    setImportJSONFileName(fileName);
+    setIsImportJSONModalOpen(true);
+  };
+
+  // Handle JSON import
+  const handleImportJSON = (data: ExportedList, mode: ImportMode) => {
+    // Merge tags and get ID mapping
+    const { updatedTags, tagIdMap } = mergeImportedTags(data.tags, globalTags);
+
+    // Update task tag references with new IDs
+    let tasks = updateTaskTagReferences(data.tasks, tagIdMap);
+
+    // Regenerate task IDs to avoid conflicts
+    tasks = regenerateTaskIds(tasks);
+
+    // Update global tags
+    setGlobalTags(updatedTags);
+    saveTags(updatedTags);
+
+    if (mode === 'new') {
+      // Create a new list with imported data
+      const newListName = `${data.list.name} (Imported)`;
+      const newListId = `list-${Date.now()}`;
+      const markdown = exportTasksToMarkdown(tasks);
+
+      setLists((prev) => ({
+        ...prev,
+        [newListId]: {
+          id: newListId,
+          name: newListName,
+          tasks,
+          markdown,
+          isMinimized: true,
+          createdAt: Date.now(),
+          updatedAt: Date.now(),
+        },
+      }));
+
+      // Switch to the new list
+      setCurrentListId(newListId);
+    } else if (mode === 'replace' && currentListId) {
+      // Replace current list tasks
+      const markdown = exportTasksToMarkdown(tasks);
+
+      setLists((prev) => ({
+        ...prev,
+        [currentListId]: {
+          ...prev[currentListId],
+          tasks,
+          markdown,
+          isMinimized: true,
+          updatedAt: Date.now(),
+        },
+      }));
+    }
+
+    // Close modal and reset state
+    setIsImportJSONModalOpen(false);
+    setImportJSONContent('');
+    setImportJSONFileName('');
+  };
+
   const handleAddTasksFromMarkdown = (markdown: string, parentId?: string) => {
     if (!currentListId) return;
 
@@ -923,6 +1018,46 @@ function TodoApp() {
         }
       })
     );
+  };
+
+  const handleUpdatePriority = (id: string, priority: Priority | undefined) => {
+    trackTaskUpdated();
+
+    updateCurrentListTasks((prevTasks) =>
+      updateTasksRecursively(prevTasks, (task) =>
+        task.id === id ? { ...task, priority } : task
+      )
+    );
+  };
+
+  const handleUpdateNotes = (id: string, notes: string | undefined) => {
+    trackTaskUpdated();
+
+    updateCurrentListTasks((prevTasks) =>
+      updateTasksRecursively(prevTasks, (task) =>
+        task.id === id ? { ...task, notes } : task
+      )
+    );
+  };
+
+  const handleUpdateTags = (id: string, tagIds: string[]) => {
+    trackTaskUpdated();
+
+    updateCurrentListTasks((prevTasks) =>
+      updateTasksRecursively(prevTasks, (task) =>
+        task.id === id ? { ...task, tags: tagIds } : task
+      )
+    );
+  };
+
+  const handleCreateTag = (name: string, color: string): TaskTag => {
+    const newTag: TaskTag = {
+      id: crypto.randomUUID(),
+      name,
+      color,
+    };
+    setGlobalTags((prev) => [...prev, newTag]);
+    return newTag;
   };
 
   // Filter tasks by search query
@@ -1021,6 +1156,7 @@ function TodoApp() {
                   onToggleMinimize={handleToggleMinimize}
                   hasContent={currentList.tasks.length > 0}
                   onImport={handleImportMarkdown}
+                  onImportJSON={handleOpenImportJSON}
                 />
                 <TodoList
                   tasks={filterTasksBySearch(currentList.tasks, searchQuery)}
@@ -1037,6 +1173,7 @@ function TodoApp() {
                   onMoveTask={handleMoveTask}
                   onExport={handleExport}
                   onDownload={handleDownload}
+                  onOpenExportModal={() => setIsExportModalOpen(true)}
                   hideCompleted={hideCompleted}
                   onToggleHideCompleted={handleToggleHideCompleted}
                   onUndo={handleUndo}
@@ -1045,6 +1182,11 @@ function TodoApp() {
                   onQuickAddTask={handleQuickAddTask}
                   onUpdateDueDate={handleUpdateDueDate}
                   onUpdateRecurrence={handleUpdateRecurrence}
+                  onUpdatePriority={handleUpdatePriority}
+                  onUpdateNotes={handleUpdateNotes}
+                  onUpdateTags={handleUpdateTags}
+                  availableTags={globalTags}
+                  onCreateTag={handleCreateTag}
                   allLists={lists}
                   currentListId={currentListId ?? undefined}
                 />
@@ -1072,6 +1214,31 @@ function TodoApp() {
           onClose={() => setIsNotificationSettingsOpen(false)}
         />
       )}
+
+      {currentList && (
+        <ExportModal
+          isOpen={isExportModalOpen}
+          onClose={() => setIsExportModalOpen(false)}
+          listName={currentList.name}
+          tasks={currentList.tasks}
+          allTags={globalTags}
+          createdAt={currentList.createdAt}
+          updatedAt={currentList.updatedAt}
+        />
+      )}
+
+      <ImportJSONModal
+        isOpen={isImportJSONModalOpen}
+        onClose={() => {
+          setIsImportJSONModalOpen(false);
+          setImportJSONContent('');
+          setImportJSONFileName('');
+        }}
+        fileContent={importJSONContent}
+        fileName={importJSONFileName}
+        existingTags={globalTags}
+        onImport={handleImportJSON}
+      />
     </PageContainer>
   );
 }
@@ -1089,6 +1256,10 @@ function AppRoutes() {
       <Route path="/habits" element={<HabitsPage />} />
       <Route path="/it-tools" element={<ITToolsPage />} />
       <Route path="/it-tools/:toolId" element={<ITToolsPage />} />
+      <Route path="/recipes" element={<RecipesPage />} />
+      <Route path="/recipes/shopping" element={<ShoppingListPage />} />
+      <Route path="/recipes/meal-plan" element={<MealPlanPage />} />
+      <Route path="/recipes/:recipeId" element={<RecipesPage />} />
     </Routes>
   );
 }

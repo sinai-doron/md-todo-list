@@ -126,6 +126,7 @@ interface MarkdownInputProps {
   onToggleMinimize: () => void;
   hasContent: boolean;
   onImport: (file: File) => void;
+  onImportJSON?: (content: string, fileName: string) => void;
 }
 
 export const MarkdownInput: React.FC<MarkdownInputProps> = ({
@@ -135,6 +136,7 @@ export const MarkdownInput: React.FC<MarkdownInputProps> = ({
   onToggleMinimize,
   hasContent,
   onImport,
+  onImportJSON,
 }) => {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [isDragging, setIsDragging] = useState(false);
@@ -143,10 +145,29 @@ export const MarkdownInput: React.FC<MarkdownInputProps> = ({
     fileInputRef.current?.click();
   };
 
+  const handleFile = (file: File) => {
+    const isJSON = file.name.toLowerCase().endsWith('.json');
+
+    if (isJSON && onImportJSON) {
+      // Read JSON file and pass to JSON import handler
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        const content = e.target?.result as string;
+        if (content) {
+          onImportJSON(content, file.name);
+        }
+      };
+      reader.readAsText(file);
+    } else {
+      // Handle as markdown
+      onImport(file);
+    }
+  };
+
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
-      onImport(file);
+      handleFile(file);
     }
     // Reset input so the same file can be selected again
     e.target.value = '';
@@ -171,7 +192,7 @@ export const MarkdownInput: React.FC<MarkdownInputProps> = ({
 
     const file = e.dataTransfer.files?.[0];
     if (file) {
-      onImport(file);
+      handleFile(file);
     }
   };
 
@@ -186,7 +207,7 @@ export const MarkdownInput: React.FC<MarkdownInputProps> = ({
       <DropOverlay $show={isDragging}>
         <DropMessage>
           <span className="material-symbols-outlined">file_upload</span>
-          <span>Drop markdown file here</span>
+          <span>Drop markdown or JSON file here</span>
         </DropMessage>
       </DropOverlay>
       <Header>
@@ -208,7 +229,7 @@ export const MarkdownInput: React.FC<MarkdownInputProps> = ({
       <HiddenFileInput
         ref={fileInputRef}
         type="file"
-        accept=".md,.txt"
+        accept=".md,.txt,.json"
         onChange={handleFileChange}
       />
       {!isMinimized && (

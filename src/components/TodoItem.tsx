@@ -1,13 +1,17 @@
 import React, { useState } from 'react';
 import type { KeyboardEvent } from 'react';
 import styled from 'styled-components';
-import type { Task, RecurrenceRule } from '../types/Task';
+import type { Task, RecurrenceRule, Priority, TaskTag } from '../types/Task';
 import { linkifyText } from '../utils/linkify';
 import { exportSingleTaskToMarkdown } from '../utils/exportMarkdown';
 import { DueDatePicker } from './DueDatePicker';
 import { AddToCalendar } from './AddToCalendar';
 import { RecurrenceIndicator } from './RecurrenceIndicator';
 import { RecurrencePicker } from './RecurrencePicker';
+import { PriorityPicker, getPriorityColor } from './PriorityPicker';
+import { TaskNotesModal, NotesIndicator } from './TaskNotesModal';
+import { TagPicker } from './TagPicker';
+import { TagBadgeList } from './TagBadge';
 
 const ItemContainer = styled.div<{ $level: number; $isDragging?: boolean; $isDropTarget?: boolean }>`
   margin-left: ${props => props.$level * 24}px;
@@ -20,7 +24,7 @@ const ItemContainer = styled.div<{ $level: number; $isDragging?: boolean; $isDro
   position: relative;
 `;
 
-const ItemContent = styled.div<{ $isHeader?: boolean; $isDraggable?: boolean; $completed?: boolean }>`
+const ItemContent = styled.div<{ $isHeader?: boolean; $isDraggable?: boolean; $completed?: boolean; $priorityColor?: string }>`
   display: flex;
   align-items: center;
   gap: 8px;
@@ -28,6 +32,8 @@ const ItemContent = styled.div<{ $isHeader?: boolean; $isDraggable?: boolean; $c
   border-radius: 4px;
   transition: background 200ms cubic-bezier(0.4, 0.0, 0.2, 1);
   background: ${props => props.$completed ? '#f9f9f9' : 'transparent'};
+  border-left: ${props => props.$priorityColor && props.$priorityColor !== 'transparent' ? `4px solid ${props.$priorityColor}` : 'none'};
+  padding-left: ${props => props.$priorityColor && props.$priorityColor !== 'transparent' ? '12px' : props.$isHeader ? '8px' : '8px'};
 
   &:hover {
     background: ${props => props.$isHeader ? 'transparent' : '#f5f5f5'};
@@ -252,6 +258,11 @@ interface TodoItemProps {
   onFocus?: (id: string) => void;
   onUpdateDueDate?: (id: string, dueDate: string | undefined) => void;
   onUpdateRecurrence?: (id: string, recurrence: RecurrenceRule | undefined) => void;
+  onUpdatePriority?: (id: string, priority: Priority | undefined) => void;
+  onUpdateNotes?: (id: string, notes: string | undefined) => void;
+  onUpdateTags?: (id: string, tagIds: string[]) => void;
+  availableTags?: TaskTag[];
+  onCreateTag?: (name: string, color: string) => TaskTag;
 }
 
 export const TodoItem: React.FC<TodoItemProps> = ({
@@ -268,6 +279,11 @@ export const TodoItem: React.FC<TodoItemProps> = ({
   onFocus,
   onUpdateDueDate,
   onUpdateRecurrence,
+  onUpdatePriority,
+  onUpdateNotes,
+  onUpdateTags,
+  availableTags = [],
+  onCreateTag,
 }) => {
   const [isEditing, setIsEditing] = useState(false);
   const [editText, setEditText] = useState(task.text);
@@ -275,6 +291,7 @@ export const TodoItem: React.FC<TodoItemProps> = ({
   const [dropPosition, setDropPosition] = useState<'before' | 'after' | 'inside' | null>(null);
   const [showCopyFeedback, setShowCopyFeedback] = useState(false);
   const [showRecurrencePicker, setShowRecurrencePicker] = useState(false);
+  const [showNotesModal, setShowNotesModal] = useState(false);
 
   const handleSave = () => {
     if (editText.trim()) {
@@ -384,7 +401,7 @@ export const TodoItem: React.FC<TodoItemProps> = ({
         {dropPosition === 'before' && <DropIndicatorLine $position="before" />}
         {dropPosition === 'after' && <DropIndicatorLine $position="after" />}
         {dropPosition === 'inside' && <DropIndicatorInside />}
-        <ItemContent $isHeader={task.isHeader} $completed={task.completed && !task.isHeader}>
+        <ItemContent $isHeader={task.isHeader} $completed={task.completed && !task.isHeader} $priorityColor={!task.isHeader ? getPriorityColor(task.priority) : undefined}>
           <DragHandle
             draggable
             onDragStart={handleDragStart}
@@ -447,6 +464,35 @@ export const TodoItem: React.FC<TodoItemProps> = ({
               <span className="material-symbols-outlined">pending</span>
               In Progress
             </StatusBadge>
+          )}
+          {!task.isHeader && onUpdatePriority && (
+            <PriorityPicker
+              priority={task.priority}
+              onPriorityChange={(priority) => onUpdatePriority(task.id, priority)}
+            />
+          )}
+          {!task.isHeader && onUpdateNotes && (
+            <NotesIndicator
+              $hasNotes={!!task.notes}
+              onClick={() => setShowNotesModal(true)}
+              title={task.notes ? 'Edit notes' : 'Add notes'}
+            >
+              <span className="material-symbols-outlined">notes</span>
+            </NotesIndicator>
+          )}
+          {!task.isHeader && task.tags && task.tags.length > 0 && (
+            <TagBadgeList
+              tags={availableTags.filter(tag => task.tags?.includes(tag.id))}
+              maxVisible={2}
+            />
+          )}
+          {!task.isHeader && onUpdateTags && onCreateTag && (
+            <TagPicker
+              selectedTagIds={task.tags || []}
+              availableTags={availableTags}
+              onTagsChange={(tagIds) => onUpdateTags(task.id, tagIds)}
+              onCreateTag={onCreateTag}
+            />
           )}
           {!task.isHeader && onUpdateRecurrence && (
             <RecurrenceIndicator
@@ -536,6 +582,11 @@ export const TodoItem: React.FC<TodoItemProps> = ({
           onFocus={onFocus}
           onUpdateDueDate={onUpdateDueDate}
           onUpdateRecurrence={onUpdateRecurrence}
+          onUpdatePriority={onUpdatePriority}
+          onUpdateNotes={onUpdateNotes}
+          onUpdateTags={onUpdateTags}
+          availableTags={availableTags}
+          onCreateTag={onCreateTag}
         />
       ))}
       {showRecurrencePicker && onUpdateRecurrence && (
@@ -547,6 +598,15 @@ export const TodoItem: React.FC<TodoItemProps> = ({
             setShowRecurrencePicker(false);
           }}
           currentRecurrence={task.recurrence}
+        />
+      )}
+      {showNotesModal && onUpdateNotes && (
+        <TaskNotesModal
+          isOpen={showNotesModal}
+          taskText={task.text}
+          notes={task.notes}
+          onClose={() => setShowNotesModal(false)}
+          onSave={(notes) => onUpdateNotes(task.id, notes)}
         />
       )}
     </>

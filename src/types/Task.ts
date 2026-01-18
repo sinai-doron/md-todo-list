@@ -1,5 +1,13 @@
 export type KanbanStatus = 'todo' | 'in-progress' | 'done';
 
+export type Priority = 'high' | 'medium' | 'low';
+
+export interface TaskTag {
+  id: string;
+  name: string;
+  color: string;
+}
+
 export type RecurrenceFrequency = 'daily' | 'weekly' | 'monthly' | 'custom';
 
 export type RecurrenceRule = {
@@ -23,6 +31,9 @@ export type Task = {
   recurrence?: RecurrenceRule; // Recurring task configuration
   isRecurring?: boolean;      // Flag for recurring tasks
   lastCompletedDate?: string; // Last completion date for recurring tasks
+  priority?: Priority;        // Task priority level
+  tags?: string[];            // Array of tag IDs
+  notes?: string;             // Markdown description/notes
 };
 
 /**

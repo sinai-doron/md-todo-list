@@ -1,6 +1,6 @@
 import React, { useState, useMemo } from 'react';
 import styled from 'styled-components';
-import type { Task } from '../../types/Task';
+import type { Task, TaskTag } from '../../types/Task';
 import type { TodoList as TodoListType } from '../../types/TodoList';
 import type { CalendarViewMode, ListSourceMode, CalendarTask } from '../../types/Calendar';
 import { CalendarHeader } from './CalendarHeader';
@@ -40,6 +40,7 @@ interface CalendarViewProps {
   onViewChange: (view: CalendarViewMode) => void;
   viewMode: CalendarViewMode;
   onNavigateToTask?: (task: CalendarTask) => void;
+  availableTags?: TaskTag[];
 }
 
 export const CalendarView: React.FC<CalendarViewProps> = ({
@@ -50,6 +51,7 @@ export const CalendarView: React.FC<CalendarViewProps> = ({
   onViewChange,
   viewMode,
   onNavigateToTask,
+  availableTags = [],
 }) => {
   const [currentDate, setCurrentDate] = useState<Date>(new Date());
   const [listSource, setListSource] = useState<ListSourceMode>('current');
@@ -181,6 +183,7 @@ export const CalendarView: React.FC<CalendarViewProps> = ({
           task={selectedTask}
           onClose={() => setSelectedTask(null)}
           onNavigateToTask={onNavigateToTask ? handleNavigateToTask : undefined}
+          availableTags={availableTags}
         />
       )}
     </CalendarContainer>

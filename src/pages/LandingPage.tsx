@@ -246,6 +246,14 @@ const categories: Category[] = [
         path: '/habits',
         color: '#e65100',
       },
+      {
+        id: 'recipes',
+        name: 'Mise',
+        icon: 'restaurant',
+        description: 'Recipe manager with scaling and cooking mode',
+        path: '/recipes',
+        color: '#f59e0b',
+      },
     ],
   },
   {

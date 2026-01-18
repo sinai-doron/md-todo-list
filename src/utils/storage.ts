@@ -1,6 +1,8 @@
 import type { StorageData, TodoList } from '../types/TodoList';
+import type { TaskTag } from '../types/Task';
 
 const STORAGE_KEY = 'markdown-todo-app-state';
+const TAGS_STORAGE_KEY = 'md-tasks-tags';
 
 /**
  * Load all lists from localStorage
@@ -93,12 +95,36 @@ export const updateList = (list: TodoList): void => {
 export const deleteList = (listId: string): void => {
   const data = loadAllLists();
   delete data.lists[listId];
-  
+
   // If we deleted the current list, clear currentListId
   if (data.currentListId === listId) {
     data.currentListId = null;
   }
-  
+
   saveAllLists(data);
+};
+
+/**
+ * Load global tags from localStorage
+ */
+export const loadTags = (): TaskTag[] => {
+  try {
+    const stored = localStorage.getItem(TAGS_STORAGE_KEY);
+    return stored ? JSON.parse(stored) : [];
+  } catch (error) {
+    console.error('Failed to load tags from localStorage:', error);
+    return [];
+  }
+};
+
+/**
+ * Save global tags to localStorage
+ */
+export const saveTags = (tags: TaskTag[]): void => {
+  try {
+    localStorage.setItem(TAGS_STORAGE_KEY, JSON.stringify(tags));
+  } catch (error) {
+    console.error('Failed to save tags to localStorage:', error);
+  }
 };
 

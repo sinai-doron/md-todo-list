@@ -3,9 +3,10 @@ import { useNavigate } from 'react-router-dom';
 import styled from 'styled-components';
 import type { CalendarViewMode, CalendarTask } from '../types/Calendar';
 import type { TodoList as TodoListType } from '../types/TodoList';
+import type { TaskTag } from '../types/Task';
 import { CalendarView } from '../components/calendar/CalendarView';
 import { SEO } from '../components/SEO';
-import { loadAllLists } from '../utils/storage';
+import { loadAllLists, loadTags } from '../utils/storage';
 
 const PageContainer = styled.div`
   min-height: 100vh;
@@ -124,12 +125,15 @@ const CalendarWrapper = styled.div`
 export function CalendarPage() {
   const navigate = useNavigate();
   const [lists, setLists] = useState<{ [listId: string]: TodoListType }>({});
+  const [tags, setTags] = useState<TaskTag[]>([]);
   const [viewMode, setViewMode] = useState<CalendarViewMode>('day');
 
-  // Load lists from storage
+  // Load lists and tags from storage
   useEffect(() => {
     const storedData = loadAllLists();
     setLists(storedData.lists);
+    const storedTags = loadTags();
+    setTags(storedTags);
   }, []);
 
   // Keyboard shortcuts
@@ -228,6 +232,7 @@ export function CalendarPage() {
             viewMode={viewMode}
             onViewChange={handleViewChange}
             onNavigateToTask={handleNavigateToTask}
+            availableTags={tags}
           />
         </CalendarWrapper>
       </MainContent>

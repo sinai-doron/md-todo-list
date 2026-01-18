@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import styled from 'styled-components';
-import type { Task, RecurrenceRule } from '../types/Task';
+import type { Task, RecurrenceRule, Priority, TaskTag } from '../types/Task';
 import type { TodoList as TodoListType } from '../types/TodoList';
 import type { CalendarViewMode, CalendarTask } from '../types/Calendar';
 import { TodoItem } from './TodoItem';
@@ -474,6 +474,7 @@ interface TodoListProps {
   onMoveTask: (draggedId: string, targetId: string, position: 'before' | 'after' | 'inside') => void;
   onExport: () => void;
   onDownload: () => void;
+  onOpenExportModal?: () => void;
   hideCompleted: boolean;
   onToggleHideCompleted: () => void;
   onUndo: () => void;
@@ -482,6 +483,11 @@ interface TodoListProps {
   onQuickAddTask: (text: string) => void;
   onUpdateDueDate: (id: string, dueDate: string | undefined) => void;
   onUpdateRecurrence: (id: string, recurrence: RecurrenceRule | undefined) => void;
+  onUpdatePriority: (id: string, priority: Priority | undefined) => void;
+  onUpdateNotes: (id: string, notes: string | undefined) => void;
+  onUpdateTags: (id: string, tagIds: string[]) => void;
+  availableTags: TaskTag[];
+  onCreateTag: (name: string, color: string) => TaskTag;
   // Calendar view props
   allLists?: { [listId: string]: TodoListType };
   currentListId?: string;
@@ -502,6 +508,7 @@ export const TodoList: React.FC<TodoListProps> = ({
   onMoveTask,
   onExport,
   onDownload,
+  onOpenExportModal,
   hideCompleted,
   onToggleHideCompleted,
   onUndo,
@@ -510,6 +517,11 @@ export const TodoList: React.FC<TodoListProps> = ({
   onQuickAddTask,
   onUpdateDueDate,
   onUpdateRecurrence,
+  onUpdatePriority,
+  onUpdateNotes,
+  onUpdateTags,
+  availableTags,
+  onCreateTag,
   allLists,
   currentListId,
 }) => {
@@ -853,6 +865,11 @@ export const TodoList: React.FC<TodoListProps> = ({
       onAddTasksFromMarkdown={handleOpenAddTasksModal}
       onUpdateDueDate={onUpdateDueDate}
       onUpdateRecurrence={onUpdateRecurrence}
+      onUpdatePriority={onUpdatePriority}
+      onUpdateNotes={onUpdateNotes}
+      onUpdateTags={onUpdateTags}
+      availableTags={availableTags}
+      onCreateTag={onCreateTag}
     />
   );
 
@@ -941,6 +958,12 @@ export const TodoList: React.FC<TodoListProps> = ({
                     <span className="material-symbols-outlined icon">download_2</span>
                     Download .md
                   </MenuItem>
+                  {onOpenExportModal && (
+                    <MenuItem onClick={() => handleOverflowAction(onOpenExportModal)}>
+                      <span className="material-symbols-outlined icon">ios_share</span>
+                      Export...
+                    </MenuItem>
+                  )}
                 </OverflowMenu>
               </OverflowMenuContainer>
             </ToolbarSection>
@@ -959,6 +982,7 @@ export const TodoList: React.FC<TodoListProps> = ({
                 viewMode={calendarView}
                 onViewChange={setCalendarView}
                 onNavigateToTask={handleNavigateToTask}
+                availableTags={availableTags}
               />
             </CalendarContainer>
           )}
@@ -1115,6 +1139,12 @@ export const TodoList: React.FC<TodoListProps> = ({
                     <span className="material-symbols-outlined icon">download_2</span>
                     Download .md
                   </MenuItem>
+                  {onOpenExportModal && (
+                    <MenuItem onClick={() => handleOverflowAction(onOpenExportModal)}>
+                      <span className="material-symbols-outlined icon">ios_share</span>
+                      Export...
+                    </MenuItem>
+                  )}
                 </OverflowMenu>
             </OverflowMenuContainer>
           </ToolbarSection>
@@ -1129,6 +1159,7 @@ export const TodoList: React.FC<TodoListProps> = ({
               viewMode={calendarView}
               onViewChange={setCalendarView}
               onNavigateToTask={handleNavigateToTask}
+              availableTags={availableTags}
             />
           </CalendarContainer>
         ) : hasSearchQuery && displayedTasks.length === 0 ? (

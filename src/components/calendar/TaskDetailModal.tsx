@@ -1,6 +1,8 @@
 import React from 'react';
 import styled from 'styled-components';
+import ReactMarkdown from 'react-markdown';
 import type { CalendarTask } from '../../types/Calendar';
+import type { Priority } from '../../types/Task';
 import { getTaskCalendarStatus } from '../../utils/calendarUtils';
 import { getRecurrenceDescription } from '../../utils/recurrence';
 
@@ -125,16 +127,124 @@ const Button = styled.button<{ $primary?: boolean }>`
   }
 `;
 
+const PriorityBadge = styled.span<{ $priority: Priority }>`
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 12px;
+  border-radius: 6px;
+  font-size: 14px;
+  font-weight: 500;
+  background: ${props => {
+    switch (props.$priority) {
+      case 'high': return '#fef2f2';
+      case 'medium': return '#fff7ed';
+      case 'low': return '#eff6ff';
+      default: return '#f3f4f6';
+    }
+  }};
+  color: ${props => {
+    switch (props.$priority) {
+      case 'high': return '#dc2626';
+      case 'medium': return '#ea580c';
+      case 'low': return '#2563eb';
+      default: return '#6b7280';
+    }
+  }};
+`;
+
+const PriorityDot = styled.span<{ $priority: Priority }>`
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: ${props => {
+    switch (props.$priority) {
+      case 'high': return '#ef4444';
+      case 'medium': return '#f97316';
+      case 'low': return '#3b82f6';
+      default: return '#9ca3af';
+    }
+  }};
+`;
+
+const NotesContainer = styled.div`
+  background: #f9fafb;
+  border-radius: 8px;
+  padding: 12px 16px;
+  font-size: 14px;
+  line-height: 1.6;
+  color: #374151;
+
+  h1, h2, h3, h4, h5, h6 {
+    margin-top: 0.5em;
+    margin-bottom: 0.25em;
+    color: #333;
+  }
+
+  h1 { font-size: 1.25em; }
+  h2 { font-size: 1.15em; }
+  h3 { font-size: 1.05em; }
+
+  p {
+    margin: 0.5em 0;
+  }
+
+  ul, ol {
+    margin: 0.5em 0;
+    padding-left: 1.5em;
+  }
+
+  code {
+    background: #e5e7eb;
+    padding: 2px 6px;
+    border-radius: 4px;
+    font-size: 0.9em;
+  }
+
+  pre {
+    background: #1f2937;
+    color: #f9fafb;
+    padding: 12px;
+    border-radius: 6px;
+    overflow-x: auto;
+
+    code {
+      background: none;
+      padding: 0;
+    }
+  }
+`;
+
+const TagsContainer = styled.div`
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+`;
+
+const TagBadge = styled.span<{ $color: string }>`
+  display: inline-flex;
+  align-items: center;
+  padding: 4px 10px;
+  border-radius: 12px;
+  font-size: 12px;
+  font-weight: 500;
+  background: ${props => `${props.$color}20`};
+  color: ${props => props.$color};
+  border: 1px solid ${props => `${props.$color}40`};
+`;
+
 interface TaskDetailModalProps {
   task: CalendarTask;
   onClose: () => void;
   onNavigateToTask?: (task: CalendarTask) => void;
+  availableTags?: Array<{ id: string; name: string; color: string }>;
 }
 
 export const TaskDetailModal: React.FC<TaskDetailModalProps> = ({
   task,
   onClose,
   onNavigateToTask,
+  availableTags = [],
 }) => {
   const status = getTaskCalendarStatus(task);
 
@@ -163,6 +273,19 @@ export const TaskDetailModal: React.FC<TaskDetailModalProps> = ({
     }
   };
 
+  const getPriorityLabel = (priority: Priority) => {
+    switch (priority) {
+      case 'high': return 'High Priority';
+      case 'medium': return 'Medium Priority';
+      case 'low': return 'Low Priority';
+      default: return '';
+    }
+  };
+
+  const taskTags = task.tags
+    ? availableTags.filter(tag => task.tags?.includes(tag.id))
+    : [];
+
   return (
     <Overlay onClick={handleOverlayClick}>
       <Modal onClick={e => e.stopPropagation()}>
@@ -182,6 +305,16 @@ export const TaskDetailModal: React.FC<TaskDetailModalProps> = ({
             </DetailSection>
           )}
 
+          {task.priority && (
+            <DetailSection>
+              <DetailLabel>Priority</DetailLabel>
+              <PriorityBadge $priority={task.priority}>
+                <PriorityDot $priority={task.priority} />
+                {getPriorityLabel(task.priority)}
+              </PriorityBadge>
+            </DetailSection>
+          )}
+
           {task.isRecurring && task.recurrence && (
             <DetailSection>
               <DetailLabel>Recurrence</DetailLabel>
@@ -189,6 +322,19 @@ export const TaskDetailModal: React.FC<TaskDetailModalProps> = ({
                 <span className="material-symbols-outlined">repeat</span>
                 {getRecurrenceDescription(task.recurrence)}
               </DetailValue>
+            </DetailSection>
+          )}
+
+          {taskTags.length > 0 && (
+            <DetailSection>
+              <DetailLabel>Tags</DetailLabel>
+              <TagsContainer>
+                {taskTags.map(tag => (
+                  <TagBadge key={tag.id} $color={tag.color}>
+                    {tag.name}
+                  </TagBadge>
+                ))}
+              </TagsContainer>
             </DetailSection>
           )}
 
@@ -216,6 +362,15 @@ export const TaskDetailModal: React.FC<TaskDetailModalProps> = ({
                   minute: '2-digit',
                 })}
               </DetailValue>
+            </DetailSection>
+          )}
+
+          {task.notes && (
+            <DetailSection>
+              <DetailLabel>Notes</DetailLabel>
+              <NotesContainer>
+                <ReactMarkdown>{task.notes}</ReactMarkdown>
+              </NotesContainer>
             </DetailSection>
           )}
         </ModalBody>
