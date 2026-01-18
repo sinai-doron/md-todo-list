@@ -1,6 +1,7 @@
 import React, { useState, useRef, useEffect, useCallback } from 'react';
 import styled from 'styled-components';
 import { imageToBase64 } from '../../utils/recipeStorage';
+import { extractImageFromUrl, isYouTubeUrl } from '../../utils/imageExtractor';
 
 const Container = styled.div`
   display: flex;
@@ -131,15 +132,85 @@ const ErrorMessage = styled.p`
   color: #ef4444;
 `;
 
+const ExtractContainer = styled.div`
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+`;
+
+const ExtractInputRow = styled.div`
+  display: flex;
+  gap: 8px;
+`;
+
+const ExtractInput = styled.input`
+  flex: 1;
+  padding: 12px;
+  border: 1px solid #e0e0e0;
+  border-radius: 8px;
+  font-size: 14px;
+
+  &:focus {
+    outline: none;
+    border-color: #f59e0b;
+  }
+`;
+
+const ExtractButton = styled.button`
+  padding: 12px 16px;
+  border: none;
+  border-radius: 8px;
+  background: #2C3E50;
+  color: white;
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.15s;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+
+  &:hover:not(:disabled) {
+    background: #1a252f;
+  }
+
+  &:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+  }
+
+  .material-symbols-outlined {
+    font-size: 18px;
+  }
+`;
+
+const ExtractHint = styled.p`
+  margin: 0;
+  font-size: 12px;
+  color: #666;
+`;
+
+const LoadingSpinner = styled.span`
+  @keyframes spin {
+    to {
+      transform: rotate(360deg);
+    }
+  }
+  display: inline-block;
+  animation: spin 1s linear infinite;
+`;
+
 interface ImageUploaderProps {
   value: string;
   onChange: (value: string) => void;
 }
 
 export const ImageUploader: React.FC<ImageUploaderProps> = ({ value, onChange }) => {
-  const [mode, setMode] = useState<'url' | 'upload'>(value.startsWith('data:') ? 'upload' : 'url');
+  const [mode, setMode] = useState<'url' | 'upload' | 'extract'>(value.startsWith('data:') ? 'upload' : 'url');
   const [isDragging, setIsDragging] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [extractUrl, setExtractUrl] = useState('');
+  const [isExtracting, setIsExtracting] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const handleUrlChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -199,6 +270,27 @@ export const ImageUploader: React.FC<ImageUploaderProps> = ({ value, onChange })
     setError(null);
   };
 
+  const handleExtract = async () => {
+    if (!extractUrl.trim() || isExtracting) return;
+
+    setIsExtracting(true);
+    setError(null);
+
+    try {
+      const result = await extractImageFromUrl(extractUrl);
+      if (result.success && result.imageUrl) {
+        onChange(result.imageUrl);
+        setExtractUrl('');
+      } else {
+        setError(result.error || 'Failed to extract image');
+      }
+    } catch {
+      setError('Failed to extract image from URL');
+    } finally {
+      setIsExtracting(false);
+    }
+  };
+
   const handlePaste = useCallback(
     async (e: ClipboardEvent) => {
       // Only handle paste in upload mode
@@ -240,16 +332,21 @@ export const ImageUploader: React.FC<ImageUploaderProps> = ({ value, onChange })
         <Tab $active={mode === 'upload'} onClick={() => setMode('upload')}>
           Upload
         </Tab>
+        <Tab $active={mode === 'extract'} onClick={() => setMode('extract')}>
+          Extract
+        </Tab>
       </TabsContainer>
 
-      {mode === 'url' ? (
+      {mode === 'url' && (
         <UrlInput
           type="url"
           placeholder="https://example.com/image.jpg"
           value={value.startsWith('data:') ? '' : value}
           onChange={handleUrlChange}
         />
-      ) : (
+      )}
+
+      {mode === 'upload' && (
         <>
           <input
             ref={fileInputRef}
@@ -275,6 +372,45 @@ export const ImageUploader: React.FC<ImageUploaderProps> = ({ value, onChange })
             <DropZoneHint>Images are automatically compressed • Ctrl+V to paste</DropZoneHint>
           </DropZone>
         </>
+      )}
+
+      {mode === 'extract' && (
+        <ExtractContainer>
+          <ExtractInputRow>
+            <ExtractInput
+              type="url"
+              placeholder="Paste YouTube or webpage URL..."
+              value={extractUrl}
+              onChange={(e) => {
+                setExtractUrl(e.target.value);
+                setError(null);
+              }}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter') {
+                  handleExtract();
+                }
+              }}
+            />
+            <ExtractButton onClick={handleExtract} disabled={!extractUrl.trim() || isExtracting}>
+              {isExtracting ? (
+                <>
+                  <LoadingSpinner className="material-symbols-outlined">progress_activity</LoadingSpinner>
+                  Extracting...
+                </>
+              ) : (
+                <>
+                  <span className="material-symbols-outlined">image_search</span>
+                  Extract
+                </>
+              )}
+            </ExtractButton>
+          </ExtractInputRow>
+          <ExtractHint>
+            {isYouTubeUrl(extractUrl)
+              ? 'YouTube video detected - will extract thumbnail'
+              : 'Paste a YouTube video URL or webpage URL to extract the main image'}
+          </ExtractHint>
+        </ExtractContainer>
       )}
 
       {error && <ErrorMessage>{error}</ErrorMessage>}

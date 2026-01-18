@@ -127,6 +127,41 @@ const MobileMeta = styled.div`
   }
 `;
 
+const HeroStartButton = styled.button`
+  position: absolute;
+  bottom: 24px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 20;
+  display: none;
+  align-items: center;
+  gap: 10px;
+  padding: 14px 28px;
+  background: ${colors.primary};
+  color: white;
+  font-size: 16px;
+  font-weight: 700;
+  border: none;
+  border-radius: 50px;
+  cursor: pointer;
+  transition: all 0.2s;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4);
+
+  @media (min-width: 768px) {
+    display: flex;
+  }
+
+  &:hover {
+    background: ${colors.primaryDark};
+    transform: translateX(-50%) translateY(-2px);
+    box-shadow: 0 12px 32px rgba(0, 0, 0, 0.5);
+  }
+
+  .material-symbols-outlined {
+    font-size: 22px;
+  }
+`;
+
 const MetaBadge = styled.div`
   display: flex;
   align-items: center;
@@ -212,6 +247,35 @@ const AuthorText = styled.p`
   font-family: 'Playfair Display', Georgia, serif;
   font-style: italic;
 `;
+
+const SourceLink = styled.a`
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: 8px;
+  font-size: 13px;
+  color: ${colors.slate500};
+  text-decoration: none;
+  transition: color 0.15s;
+
+  &:hover {
+    color: ${colors.primary};
+    text-decoration: underline;
+  }
+
+  .material-symbols-outlined {
+    font-size: 16px;
+  }
+`;
+
+// Helper to ensure URL has a protocol
+const ensureProtocol = (url: string): string => {
+  if (!url) return url;
+  if (url.startsWith('http://') || url.startsWith('https://')) {
+    return url;
+  }
+  return 'https://' + url;
+};
 
 const StatCards = styled.div`
   display: none;
@@ -438,6 +502,35 @@ const ShoppingListButton = styled.button`
   }
 `;
 
+const SidebarStartButton = styled.button`
+  width: 100%;
+  margin-top: 16px;
+  padding: 14px 20px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  background: ${colors.primary};
+  color: white;
+  font-size: 16px;
+  font-weight: 700;
+  border: none;
+  border-radius: 12px;
+  cursor: pointer;
+  transition: all 0.2s;
+  box-shadow: 0 4px 12px rgba(44, 62, 80, 0.25);
+
+  &:hover {
+    background: ${colors.primaryDark};
+    transform: translateY(-1px);
+    box-shadow: 0 6px 16px rgba(44, 62, 80, 0.3);
+  }
+
+  .material-symbols-outlined {
+    font-size: 22px;
+  }
+`;
+
 const ContentColumn = styled.div`
   display: flex;
   flex-direction: column;
@@ -500,82 +593,6 @@ const NutritionLabel = styled.span`
   text-transform: uppercase;
   letter-spacing: 0.05em;
   color: ${colors.slate500};
-`;
-
-const CookingCTA = styled.div`
-  background: rgba(44, 62, 80, 0.05);
-  border: 1px solid rgba(44, 62, 80, 0.1);
-  border-radius: 16px;
-  padding: 32px;
-  display: flex;
-  flex-direction: column;
-  gap: 24px;
-  position: relative;
-  overflow: hidden;
-
-  @media (min-width: 768px) {
-    flex-direction: row;
-    align-items: center;
-    justify-content: space-between;
-  }
-`;
-
-const CTABlur = styled.div`
-  position: absolute;
-  right: -40px;
-  top: -40px;
-  width: 160px;
-  height: 160px;
-  background: rgba(44, 62, 80, 0.1);
-  border-radius: 9999px;
-  filter: blur(48px);
-`;
-
-const CTAContent = styled.div`
-  position: relative;
-  z-index: 1;
-`;
-
-const CTATitle = styled.h4`
-  font-size: 20px;
-  font-weight: 700;
-  color: ${colors.textMain};
-  font-family: 'Playfair Display', Georgia, serif;
-  margin: 0 0 8px;
-`;
-
-const CTAText = styled.p`
-  color: ${colors.slate600};
-  margin: 0;
-  max-width: 400px;
-`;
-
-const StartCookingButton = styled.button`
-  position: relative;
-  z-index: 1;
-  white-space: nowrap;
-  background: ${colors.primary};
-  color: white;
-  font-size: 18px;
-  font-weight: 700;
-  padding: 16px 32px;
-  border-radius: 16px;
-  border: none;
-  box-shadow: 0 8px 16px rgba(44, 62, 80, 0.3);
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  cursor: pointer;
-  transition: all 0.2s;
-
-  &:hover {
-    background: ${colors.primaryDark};
-    transform: translateY(-2px);
-  }
-
-  .material-symbols-outlined {
-    font-size: 24px;
-  }
 `;
 
 const ChefTipSection = styled.div`
@@ -952,6 +969,10 @@ export const RecipeDetail: React.FC<RecipeDetailProps> = ({ recipe, onClose, onE
             {servings}
           </MetaBadge>
         </MobileMeta>
+        <HeroStartButton onClick={handleStartCooking}>
+          <span className="material-symbols-outlined">play_circle</span>
+          {t('recipe.detail.startCooking')}
+        </HeroStartButton>
       </HeroSection>
 
       <TitleSection>
@@ -969,6 +990,12 @@ export const RecipeDetail: React.FC<RecipeDetailProps> = ({ recipe, onClose, onE
           </div>
           <RecipeTitle>{recipe.title}</RecipeTitle>
           {recipe.author && <AuthorText>{t('common.by')} {recipe.author}</AuthorText>}
+          {recipe.sourceUrl && (
+            <SourceLink href={ensureProtocol(recipe.sourceUrl)} target="_blank" rel="noopener noreferrer">
+              <span className="material-symbols-outlined">open_in_new</span>
+              {t('recipe.viewOriginal', { defaultValue: 'View original recipe' })}
+            </SourceLink>
+          )}
         </TitleContent>
 
         <StatCards>
@@ -1049,6 +1076,11 @@ export const RecipeDetail: React.FC<RecipeDetailProps> = ({ recipe, onClose, onE
               {t('recipe.detail.addToShoppingList')}
             </ShoppingListButton>
           </ShoppingListDivider>
+
+          <SidebarStartButton onClick={handleStartCooking}>
+            <span className="material-symbols-outlined">play_circle</span>
+            {t('recipe.detail.startCooking')}
+          </SidebarStartButton>
         </IngredientsPanel>
 
         <ContentColumn>
@@ -1080,6 +1112,18 @@ export const RecipeDetail: React.FC<RecipeDetailProps> = ({ recipe, onClose, onE
             </NutritionGrid>
           )}
 
+          {recipe.chefTip && (
+            <ChefTipSection>
+              <ChefTipHeader>
+                <span className="material-symbols-outlined">tips_and_updates</span>
+                <ChefTipTitle>{t('recipe.chefTips')}</ChefTipTitle>
+              </ChefTipHeader>
+              <ChefTipCard $rtl={rtl}>
+                <ChefTipText>"{recipe.chefTip}"</ChefTipText>
+              </ChefTipCard>
+            </ChefTipSection>
+          )}
+
           {convertedSteps.length > 0 && (
             <StepsSection>
               <SectionTitle>{t('recipe.instructions')}</SectionTitle>
@@ -1107,32 +1151,6 @@ export const RecipeDetail: React.FC<RecipeDetailProps> = ({ recipe, onClose, onE
                 ))}
               </StepsList>
             </StepsSection>
-          )}
-
-          <CookingCTA>
-            <CTABlur />
-            <CTAContent>
-              <CTATitle>{t('recipe.detail.readyToCook')}</CTATitle>
-              <CTAText>
-                {t('recipe.detail.cookingModeDescription')}
-              </CTAText>
-            </CTAContent>
-            <StartCookingButton onClick={handleStartCooking}>
-              <span className="material-symbols-outlined">play_circle</span>
-              {t('recipe.detail.startCooking')}
-            </StartCookingButton>
-          </CookingCTA>
-
-          {recipe.chefTip && (
-            <ChefTipSection>
-              <ChefTipHeader>
-                <span className="material-symbols-outlined">tips_and_updates</span>
-                <ChefTipTitle>{t('recipe.chefTips')}</ChefTipTitle>
-              </ChefTipHeader>
-              <ChefTipCard $rtl={rtl}>
-                <ChefTipText>"{recipe.chefTip}"</ChefTipText>
-              </ChefTipCard>
-            </ChefTipSection>
           )}
         </ContentColumn>
       </MainGrid>

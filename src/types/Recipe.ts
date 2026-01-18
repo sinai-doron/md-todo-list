@@ -66,6 +66,7 @@ export interface Recipe {
   tags: string[];
   category: string;
   author?: string;
+  sourceUrl?: string; // Original URL where recipe was imported from
   rating?: number; // 0-5 scale
   reviewCount?: number;
   nutrition?: NutritionInfo;

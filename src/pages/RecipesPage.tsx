@@ -10,6 +10,7 @@ import { RecipeList } from '../components/recipes/RecipeList';
 import { RecipeDetail } from '../components/recipes/RecipeDetail';
 import { RecipeForm } from '../components/recipes/RecipeForm';
 import { AIRecipeImport } from '../components/recipes/AIRecipeImport';
+import { KeepImportModal } from '../components/recipes/KeepImportModal';
 import { mockRecipes } from '../data/mockRecipes';
 import type { Recipe } from '../types/Recipe';
 
@@ -295,6 +296,7 @@ export function RecipesPage() {
   const [searchQuery, setSearchQuery] = useState('');
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [isAIImportOpen, setIsAIImportOpen] = useState(false);
+  const [isKeepImportOpen, setIsKeepImportOpen] = useState(false);
   const [editingRecipe, setEditingRecipe] = useState<Recipe | undefined>(undefined);
 
   // Load recipes from storage on mount, initialize with mock if empty
@@ -450,6 +452,10 @@ export function RecipesPage() {
             <MobileMenuButton>
               <span className="material-symbols-outlined">menu</span>
             </MobileMenuButton>
+            <AIImportButton onClick={() => setIsKeepImportOpen(true)}>
+              <span className="material-symbols-outlined">upload_file</span>
+              Import Keep
+            </AIImportButton>
             <AIImportButton onClick={() => setIsAIImportOpen(true)}>
               <span className="material-symbols-outlined">auto_awesome</span>
               {t('nav.aiImport')}
@@ -519,6 +525,13 @@ export function RecipesPage() {
         <AIRecipeImport
           onImport={handleAIImport}
           onClose={() => setIsAIImportOpen(false)}
+        />
+      )}
+
+      {isKeepImportOpen && (
+        <KeepImportModal
+          onImport={handleAIImport}
+          onClose={() => setIsKeepImportOpen(false)}
         />
       )}
     </PageContainer>

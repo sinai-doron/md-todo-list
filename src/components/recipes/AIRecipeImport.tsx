@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import styled from 'styled-components';
 import type { Recipe } from '../../types/Recipe';
+import { extractImageFromUrl } from '../../utils/imageExtractor';
 
 const colors = {
   primary: '#2C3E50',
@@ -275,6 +276,152 @@ const PreviewDescription = styled.p`
   line-height: 1.5;
 `;
 
+const InputModeToggle = styled.div`
+  display: flex;
+  gap: 4px;
+  background: #f0f0f0;
+  border-radius: 8px;
+  padding: 4px;
+  margin-bottom: 16px;
+`;
+
+const InputModeTab = styled.button<{ $active: boolean }>`
+  flex: 1;
+  padding: 10px 16px;
+  border: none;
+  border-radius: 6px;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.15s;
+  background: ${(props) => (props.$active ? 'white' : 'transparent')};
+  color: ${(props) => (props.$active ? colors.primary : colors.textMuted)};
+  box-shadow: ${(props) => (props.$active ? '0 1px 3px rgba(0, 0, 0, 0.1)' : 'none')};
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+
+  .material-symbols-outlined {
+    font-size: 18px;
+  }
+`;
+
+const UrlInputContainer = styled.div`
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+`;
+
+const UrlInput = styled.input`
+  width: 100%;
+  padding: 14px 16px;
+  border: 1px solid #e0e0e0;
+  border-radius: 12px;
+  font-size: 14px;
+
+  &:focus {
+    outline: none;
+    border-color: ${colors.primary};
+    box-shadow: 0 0 0 3px rgba(44, 62, 80, 0.1);
+  }
+
+  &::placeholder {
+    color: ${colors.textMuted};
+  }
+`;
+
+const FetchButton = styled.button`
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 12px 20px;
+  border-radius: 10px;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s;
+  border: none;
+  background: ${colors.primary};
+  color: white;
+  align-self: flex-start;
+
+  &:hover:not(:disabled) {
+    background: ${colors.primaryDark};
+  }
+
+  &:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+  }
+
+  .material-symbols-outlined {
+    font-size: 18px;
+  }
+`;
+
+const LoadingSpinner = styled.span`
+  @keyframes spin {
+    to {
+      transform: rotate(360deg);
+    }
+  }
+  display: inline-block;
+  animation: spin 1s linear infinite;
+`;
+
+const FetchedContentPreview = styled.div`
+  background: ${colors.backgroundLight};
+  border: 1px solid #e0e0e0;
+  border-radius: 12px;
+  padding: 16px;
+  max-height: 200px;
+  overflow-y: auto;
+  font-size: 13px;
+  color: ${colors.textMain};
+  white-space: pre-wrap;
+  word-break: break-word;
+`;
+
+const SourceUrlBadge = styled.div`
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  color: ${colors.textMuted};
+  margin-top: 8px;
+
+  a {
+    color: ${colors.primary};
+    text-decoration: none;
+    &:hover {
+      text-decoration: underline;
+    }
+  }
+`;
+
+// Helper function to safely get hostname from URL
+function getHostname(url: string): string {
+  try {
+    const fullUrl = ensureProtocol(url);
+    return new URL(fullUrl).hostname;
+  } catch {
+    // If URL is invalid, try to extract domain-like part
+    const match = url.match(/(?:https?:\/\/)?(?:www\.)?([^\/\s]+)/);
+    return match ? match[1] : url;
+  }
+}
+
+// Helper to ensure URL has a protocol
+function ensureProtocol(url: string): string {
+  if (!url) return url;
+  if (url.startsWith('http://') || url.startsWith('https://')) {
+    return url;
+  }
+  return 'https://' + url;
+}
+
 // Helper function to escape text for safe JSON string inclusion
 function escapeForJSON(text: string): string {
   return text
@@ -325,6 +472,7 @@ const CONVERSION_PROMPT = `You are a recipe data converter. Convert the provided
   "category": "Main Dishes|Appetizers|Desserts|Soups|Salads|Breakfast|Beverages|Side Dishes|Snacks",
   "tags": ["tag1", "tag2"],
   "author": "Optional author name",
+  "sourceUrl": "URL where recipe was found (if provided)",
   "rating": 4.5,
   "nutrition": {
     "calories": 350,
@@ -393,13 +541,35 @@ type ImportStep = 'input' | 'prompt' | 'result';
 export const AIRecipeImport: React.FC<AIRecipeImportProps> = ({ onImport, onClose }) => {
   const { t } = useTranslation();
   const [step, setStep] = useState<ImportStep>('input');
+  const [inputMode, setInputMode] = useState<'text' | 'url'>('text');
   const [recipeText, setRecipeText] = useState('');
+  const [sourceUrl, setSourceUrl] = useState('');
+  const [isFetching, setIsFetching] = useState(false);
+  const [fetchedContent, setFetchedContent] = useState('');
+  const [extractedImage, setExtractedImage] = useState('');
   const [jsonResult, setJsonResult] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
   const [parsedRecipe, setParsedRecipe] = useState<Omit<Recipe, 'id' | 'createdAt' | 'updatedAt'> | null>(null);
 
-  const fullPrompt = CONVERSION_PROMPT + escapeForJSON(recipeText) + '\n\n---\n\nOutput ONLY the JSON object, no additional text or markdown code blocks.';
+  // Get the content to use in the prompt (either pasted text or fetched content)
+  const contentForPrompt = inputMode === 'url' ? fetchedContent : recipeText;
+
+  // Build the full prompt with source URL info if available
+  const buildFullPrompt = () => {
+    let prompt = CONVERSION_PROMPT;
+    if (inputMode === 'url' && sourceUrl) {
+      prompt += `Source URL: ${sourceUrl}\n\n`;
+    }
+    prompt += escapeForJSON(contentForPrompt);
+    prompt += '\n\n---\n\nOutput ONLY the JSON object, no additional text or markdown code blocks.';
+    if (inputMode === 'url' && sourceUrl) {
+      prompt += `\n\nIMPORTANT: Include "sourceUrl": "${sourceUrl}" in your JSON output.`;
+    }
+    return prompt;
+  };
+
+  const fullPrompt = buildFullPrompt();
 
   const handleCopyPrompt = async () => {
     try {
@@ -417,6 +587,83 @@ export const AIRecipeImport: React.FC<AIRecipeImportProps> = ({ onImport, onClos
       setCopied(true);
       setTimeout(() => setCopied(false), 2000);
     }
+  };
+
+  const fetchUrlContent = async () => {
+    if (!sourceUrl.trim() || isFetching) return;
+
+    setIsFetching(true);
+    setError(null);
+    setFetchedContent('');
+    setExtractedImage('');
+
+    // List of CORS proxy options
+    const corsProxies = [
+      (u: string) => `https://corsproxy.io/?${encodeURIComponent(u)}`,
+      (u: string) => `https://api.allorigins.win/raw?url=${encodeURIComponent(u)}`,
+    ];
+
+    let normalizedUrl = sourceUrl.trim();
+    if (!normalizedUrl.startsWith('http://') && !normalizedUrl.startsWith('https://')) {
+      normalizedUrl = 'https://' + normalizedUrl;
+    }
+
+    let fetchSuccess = false;
+
+    for (const proxyFn of corsProxies) {
+      try {
+        const proxyUrl = proxyFn(normalizedUrl);
+        const response = await fetch(proxyUrl, {
+          headers: { Accept: 'text/html' },
+        });
+
+        if (!response.ok) continue;
+
+        const html = await response.text();
+
+        // Parse the HTML to extract text content
+        const parser = new DOMParser();
+        const doc = parser.parseFromString(html, 'text/html');
+
+        // Remove scripts, styles, and other non-content elements
+        doc.querySelectorAll('script, style, nav, header, footer, aside, .ad, .advertisement').forEach(el => el.remove());
+
+        // Try to find the main content
+        const mainContent = doc.querySelector('main, article, .recipe, [itemtype*="Recipe"], .post-content, .entry-content');
+        const contentElement = mainContent || doc.body;
+
+        // Get text content, cleaning up whitespace
+        let textContent = contentElement?.textContent || '';
+        textContent = textContent
+          .replace(/\s+/g, ' ')
+          .replace(/\n\s*\n/g, '\n')
+          .trim();
+
+        if (textContent.length > 100) {
+          // Limit content length to avoid huge prompts
+          if (textContent.length > 10000) {
+            textContent = textContent.substring(0, 10000) + '...\n[Content truncated]';
+          }
+          setFetchedContent(textContent);
+          fetchSuccess = true;
+
+          // Try to extract image from the page
+          const imageResult = await extractImageFromUrl(normalizedUrl);
+          if (imageResult.success && imageResult.imageUrl) {
+            setExtractedImage(imageResult.imageUrl);
+          }
+          break;
+        }
+      } catch {
+        continue;
+      }
+    }
+
+    if (!fetchSuccess) {
+      setError('Could not fetch content from this URL. Try pasting the recipe text directly.');
+    }
+
+    setIsFetching(false);
   };
 
   const handleParseJSON = () => {
@@ -452,12 +699,27 @@ export const AIRecipeImport: React.FC<AIRecipeImportProps> = ({ onImport, onClos
         throw new Error('Steps must be an array');
       }
 
+      // Determine the image to use (AI output, extracted, or none)
+      let recipeImage = parsed.image;
+      if (!recipeImage && extractedImage) {
+        recipeImage = extractedImage;
+      }
+
+      // Determine source URL (from AI output or our tracked URL)
+      let recipeSourceUrl = parsed.sourceUrl;
+      if (!recipeSourceUrl && inputMode === 'url' && sourceUrl) {
+        recipeSourceUrl = sourceUrl.trim();
+        if (!recipeSourceUrl.startsWith('http://') && !recipeSourceUrl.startsWith('https://')) {
+          recipeSourceUrl = 'https://' + recipeSourceUrl;
+        }
+      }
+
       // Set defaults for optional fields
       const recipe: Omit<Recipe, 'id' | 'createdAt' | 'updatedAt'> = {
         title: parsed.title,
         description: parsed.description || '',
         aboutDish: parsed.aboutDish,
-        image: parsed.image,
+        image: recipeImage,
         prepTime: parsed.prepTime || 15,
         cookTime: parsed.cookTime || 30,
         difficulty: parsed.difficulty || 'medium',
@@ -467,6 +729,7 @@ export const AIRecipeImport: React.FC<AIRecipeImportProps> = ({ onImport, onClos
         tags: parsed.tags || [],
         category: parsed.category || 'Main Dishes',
         author: parsed.author,
+        sourceUrl: recipeSourceUrl,
         rating: parsed.rating,
         reviewCount: parsed.reviewCount,
         nutrition: parsed.nutrition,
@@ -527,15 +790,28 @@ export const AIRecipeImport: React.FC<AIRecipeImportProps> = ({ onImport, onClos
 
           {step === 'input' && (
             <Section>
-              <Label>Paste your recipe</Label>
-              <HelpText>
-                Paste any recipe text - from a website, cookbook, or your own notes.
-                The AI will convert it to our format.
-              </HelpText>
-              <TextArea
-                value={recipeText}
-                onChange={(e) => setRecipeText(e.target.value)}
-                placeholder="Paste your recipe here...
+              <InputModeToggle>
+                <InputModeTab $active={inputMode === 'text'} onClick={() => setInputMode('text')}>
+                  <span className="material-symbols-outlined">edit_note</span>
+                  Paste Text
+                </InputModeTab>
+                <InputModeTab $active={inputMode === 'url'} onClick={() => setInputMode('url')}>
+                  <span className="material-symbols-outlined">link</span>
+                  From URL
+                </InputModeTab>
+              </InputModeToggle>
+
+              {inputMode === 'text' ? (
+                <>
+                  <Label>Paste your recipe</Label>
+                  <HelpText>
+                    Paste any recipe text - from a website, cookbook, or your own notes.
+                    The AI will convert it to our format.
+                  </HelpText>
+                  <TextArea
+                    value={recipeText}
+                    onChange={(e) => setRecipeText(e.target.value)}
+                    placeholder="Paste your recipe here...
 
 Example:
 Classic Spaghetti Carbonara
@@ -553,13 +829,71 @@ Instructions:
 3. Mix egg yolks with cheese
 4. Combine everything off heat
 ..."
-              />
+                  />
+                </>
+              ) : (
+                <>
+                  <Label>Import from URL</Label>
+                  <HelpText>
+                    Enter a recipe URL and we'll fetch the content for the AI to convert.
+                    The source URL will be saved with your recipe.
+                  </HelpText>
+                  <UrlInputContainer>
+                    <UrlInput
+                      type="url"
+                      placeholder="https://example.com/recipe..."
+                      value={sourceUrl}
+                      onChange={(e) => {
+                        setSourceUrl(e.target.value);
+                        setError(null);
+                      }}
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter') {
+                          fetchUrlContent();
+                        }
+                      }}
+                    />
+                    <FetchButton onClick={fetchUrlContent} disabled={!sourceUrl.trim() || isFetching}>
+                      {isFetching ? (
+                        <>
+                          <LoadingSpinner className="material-symbols-outlined">progress_activity</LoadingSpinner>
+                          Fetching...
+                        </>
+                      ) : (
+                        <>
+                          <span className="material-symbols-outlined">download</span>
+                          Fetch Content
+                        </>
+                      )}
+                    </FetchButton>
+                  </UrlInputContainer>
+
+                  {fetchedContent && (
+                    <>
+                      <Label style={{ marginTop: '16px' }}>Fetched Content Preview</Label>
+                      <FetchedContentPreview>
+                        {fetchedContent.substring(0, 1000)}
+                        {fetchedContent.length > 1000 && '...'}
+                      </FetchedContentPreview>
+                      {extractedImage && (
+                        <SourceUrlBadge>
+                          <span className="material-symbols-outlined" style={{ fontSize: '14px' }}>image</span>
+                          Image detected and will be included
+                        </SourceUrlBadge>
+                      )}
+                    </>
+                  )}
+                </>
+              )}
+
+              {error && <ErrorMessage>{error}</ErrorMessage>}
+
               <ButtonRow>
                 <Button onClick={onClose}>Cancel</Button>
                 <Button
                   $primary
                   onClick={() => setStep('prompt')}
-                  disabled={!recipeText.trim()}
+                  disabled={inputMode === 'text' ? !recipeText.trim() : !fetchedContent.trim()}
                 >
                   Next
                   <span className="material-symbols-outlined">arrow_forward</span>
@@ -645,6 +979,20 @@ Instructions:
                       <span>{parsedRecipe.steps.length} steps</span>
                     </PreviewMeta>
                     <PreviewDescription>{parsedRecipe.description}</PreviewDescription>
+                    {parsedRecipe.sourceUrl && (
+                      <SourceUrlBadge>
+                        <span className="material-symbols-outlined" style={{ fontSize: '14px' }}>link</span>
+                        Source: <a href={ensureProtocol(parsedRecipe.sourceUrl)} target="_blank" rel="noopener noreferrer">
+                          {getHostname(parsedRecipe.sourceUrl)}
+                        </a>
+                      </SourceUrlBadge>
+                    )}
+                    {parsedRecipe.image && (
+                      <SourceUrlBadge>
+                        <span className="material-symbols-outlined" style={{ fontSize: '14px' }}>image</span>
+                        Image included
+                      </SourceUrlBadge>
+                    )}
                   </PreviewCard>
                 </>
               )}
