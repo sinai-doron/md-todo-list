@@ -142,7 +142,9 @@
     "categories": "Categories",
     "allRecipes": "All Recipes",
     "tags": "Tags",
-    "language": "Language"
+    "language": "Language",
+    "viewOptions": "View Options",
+    "hideBuiltIn": "Hide built-in recipes"
   },
   "empty": {
     "noRecipes": "No recipes found",

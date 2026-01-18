@@ -2,6 +2,8 @@ import { useState, useEffect, useRef } from 'react';
 import { BrowserRouter, Routes, Route, useNavigate } from 'react-router-dom';
 import './i18n';
 import { usePageTracking } from './hooks/useAnalytics';
+import { AuthProvider, useAuth } from './firebase';
+import { SignIn } from './components/SignIn';
 import styled from 'styled-components';
 import { MarkdownInput } from './components/MarkdownInput';
 import { TodoList } from './components/TodoList';
@@ -17,6 +19,9 @@ import { CalendarPage } from './pages/CalendarPage';
 import { RecipesPage } from './pages/RecipesPage';
 import { ShoppingListPage } from './pages/ShoppingListPage';
 import { MealPlanPage } from './pages/MealPlanPage';
+import { ProfilePage } from './pages/ProfilePage';
+import { AdminPage } from './pages/AdminPage';
+import { AdminGuard } from './components/AdminGuard';
 import { ProductivityDashboard } from './components/ProductivityDashboard';
 import { NotificationSettings } from './components/NotificationSettings';
 import { SEO } from './components/SEO';
@@ -1243,11 +1248,51 @@ function TodoApp() {
   );
 }
 
+// Protected route wrapper - requires authentication for Mise routes only
+function MiseAuthGuard({ children }: { children: React.ReactNode }) {
+  const { user, loading } = useAuth();
+
+  // Initialize user profile when authenticated
+  useEffect(() => {
+    if (user) {
+      import('./stores/userProfileStore').then(({ useUserProfileStore }) => {
+        useUserProfileStore.getState().initializeProfile();
+      });
+    }
+  }, [user]);
+
+  if (loading) {
+    return (
+      <div style={{
+        minHeight: '100vh',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        background: '#f5f5f5'
+      }}>
+        <div style={{ textAlign: 'center', color: '#666' }}>
+          <div className="material-symbols-outlined" style={{ fontSize: 48, marginBottom: 16 }}>
+            hourglass_empty
+          </div>
+          <div>Loading...</div>
+        </div>
+      </div>
+    );
+  }
+
+  if (!user) {
+    return <SignIn />;
+  }
+
+  return <>{children}</>;
+}
+
 function AppRoutes() {
   usePageTracking();
 
   return (
     <Routes>
+      {/* Public routes - no auth required */}
       <Route path="/" element={<LandingPage />} />
       <Route path="/todo" element={<TodoApp />} />
       <Route path="/calendar" element={<CalendarPage />} />
@@ -1256,19 +1301,27 @@ function AppRoutes() {
       <Route path="/habits" element={<HabitsPage />} />
       <Route path="/it-tools" element={<ITToolsPage />} />
       <Route path="/it-tools/:toolId" element={<ITToolsPage />} />
-      <Route path="/recipes" element={<RecipesPage />} />
-      <Route path="/recipes/shopping" element={<ShoppingListPage />} />
-      <Route path="/recipes/meal-plan" element={<MealPlanPage />} />
-      <Route path="/recipes/:recipeId" element={<RecipesPage />} />
+
+      {/* Mise routes - auth required */}
+      <Route path="/recipes" element={<MiseAuthGuard><RecipesPage /></MiseAuthGuard>} />
+      <Route path="/recipes/shopping" element={<MiseAuthGuard><ShoppingListPage /></MiseAuthGuard>} />
+      <Route path="/recipes/meal-plan" element={<MiseAuthGuard><MealPlanPage /></MiseAuthGuard>} />
+      <Route path="/recipes/:recipeId" element={<MiseAuthGuard><RecipesPage /></MiseAuthGuard>} />
+      <Route path="/profile" element={<MiseAuthGuard><ProfilePage /></MiseAuthGuard>} />
+
+      {/* Admin routes - requires isAdmin flag in profile */}
+      <Route path="/admin" element={<AdminGuard><AdminPage /></AdminGuard>} />
     </Routes>
   );
 }
 
 function App() {
   return (
-    <BrowserRouter>
-      <AppRoutes />
-    </BrowserRouter>
+    <AuthProvider>
+      <BrowserRouter>
+        <AppRoutes />
+      </BrowserRouter>
+    </AuthProvider>
   );
 }
 

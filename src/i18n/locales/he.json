@@ -142,7 +142,9 @@
     "categories": "קטגוריות",
     "allRecipes": "כל המתכונים",
     "tags": "תגיות",
-    "language": "שפה"
+    "language": "שפה",
+    "viewOptions": "אפשרויות תצוגה",
+    "hideBuiltIn": "הסתר מתכוני בסיס"
   },
   "empty": {
     "noRecipes": "לא נמצאו מתכונים",

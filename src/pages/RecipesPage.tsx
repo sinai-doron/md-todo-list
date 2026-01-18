@@ -5,13 +5,14 @@ import styled from 'styled-components';
 import { useLanguage } from '../i18n/useLanguage';
 import { SEO } from '../components/SEO';
 import { useRecipeStore } from '../stores/recipeStore';
+import { useAuth } from '../firebase';
 import { RecipeSidebar } from '../components/recipes/RecipeSidebar';
 import { RecipeList } from '../components/recipes/RecipeList';
 import { RecipeDetail } from '../components/recipes/RecipeDetail';
 import { RecipeForm } from '../components/recipes/RecipeForm';
 import { AIRecipeImport } from '../components/recipes/AIRecipeImport';
 import { KeepImportModal } from '../components/recipes/KeepImportModal';
-import { mockRecipes } from '../data/mockRecipes';
+import { UserMenu } from '../components/UserMenu';
 import type { Recipe } from '../types/Recipe';
 
 // Color palette
@@ -285,35 +286,36 @@ export function RecipesPage() {
   const { recipeId } = useParams<{ recipeId: string }>();
   const { t } = useTranslation();
   const { currentLanguage, changeLanguage, isRTL } = useLanguage();
+  const { user } = useAuth();
 
   const recipes = useRecipeStore((s) => s.recipes);
-  const loadFromStorage = useRecipeStore((s) => s.loadFromStorage);
+  const initializeFirebaseSync = useRecipeStore((s) => s.initializeFirebaseSync);
   const addRecipe = useRecipeStore((s) => s.addRecipe);
 
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
   const [selectedTag, setSelectedTag] = useState<string | null>(null);
   const [selectedLanguage, setSelectedLanguage] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
+  const [hideBuiltIn, setHideBuiltIn] = useState(false);
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [isAIImportOpen, setIsAIImportOpen] = useState(false);
   const [isKeepImportOpen, setIsKeepImportOpen] = useState(false);
   const [editingRecipe, setEditingRecipe] = useState<Recipe | undefined>(undefined);
 
-  // Load recipes from storage on mount, initialize with mock if empty
+  // Initialize Firebase sync on mount (loads from Firestore + sets up real-time listeners)
   useEffect(() => {
-    loadFromStorage();
+    let cleanup: (() => void) | undefined;
 
-    // Check after loading - if still empty, add mock recipes
-    const storedRecipes = useRecipeStore.getState().recipes;
-    if (storedRecipes.length === 0) {
-      mockRecipes.forEach((recipe) => {
-        // eslint-disable-next-line @typescript-eslint/no-unused-vars
-        const { id, createdAt, updatedAt, ...recipeData } = recipe;
-        addRecipe(recipeData);
-      });
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+    const init = async () => {
+      cleanup = await initializeFirebaseSync();
+    };
+
+    init();
+
+    return () => {
+      if (cleanup) cleanup();
+    };
+  }, [initializeFirebaseSync, user]);
 
   // Escape key handler - navigate back within Mise app
   useEffect(() => {
@@ -338,6 +340,7 @@ export function RecipesPage() {
 
   // Filter recipes
   const filteredRecipes = recipes.filter((recipe) => {
+    if (hideBuiltIn && recipe.isBuiltIn) return false;
     if (selectedCategory && recipe.category !== selectedCategory) return false;
     if (selectedTag && !recipe.tags.includes(selectedTag)) return false;
     if (selectedLanguage && recipe.language !== selectedLanguage) return false;
@@ -464,6 +467,7 @@ export function RecipesPage() {
               <span className="material-symbols-outlined">add</span>
               {t('nav.addRecipe')}
             </AddButton>
+            <UserMenu />
           </HeaderRight>
         </HeaderContent>
       </Header>
@@ -479,10 +483,12 @@ export function RecipesPage() {
               selectedTag={selectedTag}
               selectedLanguage={selectedLanguage}
               searchQuery={searchQuery}
+              hideBuiltIn={hideBuiltIn}
               onSelectCategory={setSelectedCategory}
               onSelectTag={setSelectedTag}
               onSelectLanguage={setSelectedLanguage}
               onSearchChange={setSearchQuery}
+              onToggleHideBuiltIn={() => setHideBuiltIn(!hideBuiltIn)}
               recipeCount={filteredRecipes.length}
             />
           </SidebarWrapper>
@@ -494,8 +500,8 @@ export function RecipesPage() {
               <RecipeDetail
                 recipe={selectedRecipe}
                 onClose={handleCloseRecipe}
-                onEdit={() => handleEditRecipe(selectedRecipe)}
-                onDelete={() => handleDeleteRecipe(selectedRecipe)}
+                onEdit={selectedRecipe.isBuiltIn ? undefined : () => handleEditRecipe(selectedRecipe)}
+                onDelete={selectedRecipe.isBuiltIn ? undefined : () => handleDeleteRecipe(selectedRecipe)}
               />
             </DetailWrapper>
           ) : filteredRecipes.length > 0 ? (

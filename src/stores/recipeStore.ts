@@ -14,9 +14,33 @@ import {
   loadServingsMap,
   saveServingsMap,
 } from '../utils/recipeStorage';
+import { builtInRecipes as localBuiltInRecipes } from '../data/mockRecipes';
+import {
+  loadBuiltInRecipesFromFirestore,
+  subscribeToBuiltInRecipes,
+} from '../firebase/builtInRecipeSync';
+import {
+  loadRecipesFromFirestore,
+  saveRecipeToFirestore,
+  deleteRecipeFromFirestore,
+  loadGroceryListFromFirestore,
+  saveGroceryListToFirestore,
+  clearGroceryListFromFirestore,
+  loadServingsMapFromFirestore,
+  saveServingsMapToFirestore,
+  subscribeToRecipes,
+  subscribeToGroceryList,
+  subscribeToServingsMap,
+  migrateLocalStorageToFirestore,
+} from '../firebase/recipeSync';
+import { isSignedIn } from '../firebase';
 
 interface RecipeStore {
-  // Recipes
+  // Built-in recipes (from Firestore or local fallback)
+  builtInRecipes: Recipe[];
+  // User recipes (stored in Firestore per user)
+  userRecipes: Recipe[];
+  // Combined: builtInRecipes + userRecipes
   recipes: Recipe[];
   selectedRecipeId: string | null;
 
@@ -33,8 +57,14 @@ interface RecipeStore {
   // Timers
   activeTimers: TimerState[];
 
+  // Sync state
+  isLoading: boolean;
+  isSyncing: boolean;
+  lastSyncError: string | null;
+
   // Recipe actions
   loadFromStorage: () => void;
+  initializeFirebaseSync: () => Promise<() => void>;
   addRecipe: (recipe: Omit<Recipe, 'id' | 'createdAt' | 'updatedAt'>) => Recipe;
   updateRecipe: (id: string, updates: Partial<Recipe>) => void;
   deleteRecipe: (id: string) => void;
@@ -72,20 +102,132 @@ interface RecipeStore {
 
 export const useRecipeStore = create<RecipeStore>((set, get) => ({
   // Initial state
-  recipes: [],
+  builtInRecipes: [...localBuiltInRecipes], // Start with local, update from Firestore
+  userRecipes: [],
+  recipes: [...localBuiltInRecipes], // Start with built-in recipes
   selectedRecipeId: null,
   servingsMap: {},
   groceryItems: [],
   showCompletedGroceries: true,
   cookingSession: null,
   activeTimers: [],
+  isLoading: false,
+  isSyncing: false,
+  lastSyncError: null,
 
-  // Load from localStorage
+  // Load from localStorage - combines built-in with user recipes (fallback)
   loadFromStorage: () => {
-    const recipes = loadRecipes();
+    const userRecipes = loadRecipes();
     const groceryItems = loadGroceryList();
     const servingsMap = loadServingsMap();
-    set({ recipes, groceryItems, servingsMap });
+    // Combine built-in recipes with user recipes
+    const builtIn = get().builtInRecipes;
+    const recipes = [...builtIn, ...userRecipes];
+    set({ userRecipes, recipes, groceryItems, servingsMap });
+  },
+
+  // Initialize Firebase sync - loads from Firestore and sets up real-time listeners
+  initializeFirebaseSync: async () => {
+    set({ isLoading: true, lastSyncError: null });
+
+    try {
+      // Always load built-in recipes from Firestore (global collection)
+      const builtIn = await loadBuiltInRecipesFromFirestore();
+      set({ builtInRecipes: builtIn });
+
+      if (!isSignedIn()) {
+        console.log('Not signed in, using localStorage for user data');
+        const userRecipes = loadRecipes();
+        const groceryItems = loadGroceryList();
+        const servingsMap = loadServingsMap();
+        const recipes = [...builtIn, ...userRecipes];
+        set({ userRecipes, recipes, groceryItems, servingsMap, isLoading: false });
+
+        // Subscribe to built-in recipe updates only
+        const unsubBuiltIn = subscribeToBuiltInRecipes((newBuiltIn) => {
+          set((state) => {
+            const recipes = [...newBuiltIn, ...state.userRecipes];
+            return { builtInRecipes: newBuiltIn, recipes };
+          });
+        });
+
+        return () => {
+          unsubBuiltIn();
+        };
+      }
+
+      // Load user data from Firestore
+      const [firestoreRecipes, firestoreGrocery, firestoreServings] = await Promise.all([
+        loadRecipesFromFirestore(),
+        loadGroceryListFromFirestore(),
+        loadServingsMapFromFirestore(),
+      ]);
+
+      // Check if we have local data that needs migration
+      const localRecipes = loadRecipes();
+      const localGrocery = loadGroceryList();
+      const localServings = loadServingsMap();
+
+      // If Firestore is empty but we have local data, migrate it
+      if (firestoreRecipes.length === 0 && localRecipes.length > 0) {
+        console.log('Migrating local data to Firestore...');
+        await migrateLocalStorageToFirestore(localRecipes, localGrocery, localServings);
+        // Use local data after migration
+        const recipes = [...builtIn, ...localRecipes];
+        set({ userRecipes: localRecipes, recipes, groceryItems: localGrocery, servingsMap: localServings });
+      } else {
+        // Use Firestore data
+        const recipes = [...builtIn, ...firestoreRecipes];
+        set({ userRecipes: firestoreRecipes, recipes, groceryItems: firestoreGrocery, servingsMap: firestoreServings });
+      }
+
+      // Set up real-time listeners for cross-device sync
+      const unsubBuiltIn = subscribeToBuiltInRecipes((newBuiltIn) => {
+        set((state) => {
+          const recipes = [...newBuiltIn, ...state.userRecipes];
+          return { builtInRecipes: newBuiltIn, recipes };
+        });
+      });
+
+      const unsubRecipes = subscribeToRecipes((userRecipes) => {
+        set((state) => {
+          // Only update if not currently syncing (to avoid loops)
+          if (state.isSyncing) return state;
+          const combined = [...state.builtInRecipes, ...userRecipes];
+          return { userRecipes, recipes: combined };
+        });
+      });
+
+      const unsubGrocery = subscribeToGroceryList((items) => {
+        set((state) => {
+          if (state.isSyncing) return state;
+          return { groceryItems: items };
+        });
+      });
+
+      const unsubServings = subscribeToServingsMap((servingsMap) => {
+        set((state) => {
+          if (state.isSyncing) return state;
+          return { servingsMap };
+        });
+      });
+
+      set({ isLoading: false });
+
+      // Return cleanup function
+      return () => {
+        unsubBuiltIn();
+        unsubRecipes();
+        unsubGrocery();
+        unsubServings();
+      };
+    } catch (error) {
+      console.error('Failed to initialize Firebase sync:', error);
+      set({ lastSyncError: (error as Error).message, isLoading: false });
+      // Fall back to localStorage
+      get().loadFromStorage();
+      return () => {};
+    }
   },
 
   // Recipe CRUD
@@ -99,46 +241,103 @@ export const useRecipeStore = create<RecipeStore>((set, get) => ({
     };
 
     set((state) => {
-      const recipes = [...state.recipes, newRecipe];
-      saveRecipes(recipes);
-      return { recipes };
+      const userRecipes = [...state.userRecipes, newRecipe];
+      saveRecipes(userRecipes); // Keep localStorage as backup
+      // Combine built-in + user recipes
+      const recipes = [...state.builtInRecipes, ...userRecipes];
+      return { userRecipes, recipes, isSyncing: true };
     });
+
+    // Sync to Firestore
+    if (isSignedIn()) {
+      saveRecipeToFirestore(newRecipe)
+        .then(() => set({ isSyncing: false }))
+        .catch((error) => {
+          console.error('Failed to sync new recipe:', error);
+          set({ isSyncing: false, lastSyncError: error.message });
+        });
+    } else {
+      set({ isSyncing: false });
+    }
 
     return newRecipe;
   },
 
   updateRecipe: (id, updates) => {
+    const state = get();
+    // Only allow updating user recipes (not built-in)
+    const recipe = state.recipes.find((r) => r.id === id);
+    if (recipe?.isBuiltIn) return;
+
+    const updatedRecipe = { ...recipe, ...updates, updatedAt: Date.now() } as Recipe;
+
     set((state) => {
-      const recipes = state.recipes.map((recipe) =>
-        recipe.id === id
-          ? { ...recipe, ...updates, updatedAt: Date.now() }
-          : recipe
+      const userRecipes = state.userRecipes.map((r) =>
+        r.id === id ? updatedRecipe : r
       );
-      saveRecipes(recipes);
-      return { recipes };
+      saveRecipes(userRecipes); // Keep localStorage as backup
+      // Combine built-in + user recipes
+      const recipes = [...state.builtInRecipes, ...userRecipes];
+      return { userRecipes, recipes, isSyncing: true };
     });
+
+    // Sync to Firestore
+    if (isSignedIn()) {
+      saveRecipeToFirestore(updatedRecipe)
+        .then(() => set({ isSyncing: false }))
+        .catch((error) => {
+          console.error('Failed to sync recipe update:', error);
+          set({ isSyncing: false, lastSyncError: error.message });
+        });
+    } else {
+      set({ isSyncing: false });
+    }
   },
 
   deleteRecipe: (id) => {
-    set((state) => {
-      const recipes = state.recipes.filter((recipe) => recipe.id !== id);
-      // Also remove from grocery list
-      const groceryItems = state.groceryItems.filter((item) => item.recipeId !== id);
-      // Remove from servings map
-      const servingsMap = { ...state.servingsMap };
-      delete servingsMap[id];
+    const state = get();
+    // Cannot delete built-in recipes
+    const recipe = state.recipes.find((r) => r.id === id);
+    if (recipe?.isBuiltIn) return;
 
-      saveRecipes(recipes);
-      saveGroceryList(groceryItems);
-      saveServingsMap(servingsMap);
+    const userRecipes = state.userRecipes.filter((recipe) => recipe.id !== id);
+    // Also remove from grocery list
+    const groceryItems = state.groceryItems.filter((item) => item.recipeId !== id);
+    // Remove from servings map
+    const servingsMap = { ...state.servingsMap };
+    delete servingsMap[id];
 
-      return {
-        recipes,
-        groceryItems,
-        servingsMap,
-        selectedRecipeId: state.selectedRecipeId === id ? null : state.selectedRecipeId,
-      };
+    saveRecipes(userRecipes);
+    saveGroceryList(groceryItems);
+    saveServingsMap(servingsMap);
+
+    // Combine built-in + user recipes
+    const recipes = [...state.builtInRecipes, ...userRecipes];
+
+    set({
+      userRecipes,
+      recipes,
+      groceryItems,
+      servingsMap,
+      selectedRecipeId: state.selectedRecipeId === id ? null : state.selectedRecipeId,
+      isSyncing: true,
     });
+
+    // Sync to Firestore
+    if (isSignedIn()) {
+      Promise.all([
+        deleteRecipeFromFirestore(id),
+        saveGroceryListToFirestore(groceryItems),
+        saveServingsMapToFirestore(servingsMap),
+      ])
+        .then(() => set({ isSyncing: false }))
+        .catch((error) => {
+          console.error('Failed to sync recipe deletion:', error);
+          set({ isSyncing: false, lastSyncError: error.message });
+        });
+    } else {
+      set({ isSyncing: false });
+    }
   },
 
   selectRecipe: (id) => {
@@ -147,11 +346,21 @@ export const useRecipeStore = create<RecipeStore>((set, get) => ({
 
   // Servings
   setServings: (recipeId, servings) => {
-    set((state) => {
-      const servingsMap = { ...state.servingsMap, [recipeId]: servings };
-      saveServingsMap(servingsMap);
-      return { servingsMap };
-    });
+    const newServingsMap = { ...get().servingsMap, [recipeId]: servings };
+    saveServingsMap(newServingsMap);
+    set({ servingsMap: newServingsMap, isSyncing: true });
+
+    // Sync to Firestore
+    if (isSignedIn()) {
+      saveServingsMapToFirestore(newServingsMap)
+        .then(() => set({ isSyncing: false }))
+        .catch((error) => {
+          console.error('Failed to sync servings:', error);
+          set({ isSyncing: false, lastSyncError: error.message });
+        });
+    } else {
+      set({ isSyncing: false });
+    }
   },
 
   getServings: (recipeId) => {
@@ -179,36 +388,78 @@ export const useRecipeStore = create<RecipeStore>((set, get) => ({
       scaledQuantity: scaleQuantity(ing.quantity, scale),
     }));
 
-    set((state) => {
-      // Remove existing items from this recipe first
-      const filteredItems = state.groceryItems.filter((item) => item.recipeId !== recipeId);
-      const groceryItems = [...filteredItems, ...newItems];
-      saveGroceryList(groceryItems);
-      return { groceryItems };
-    });
+    // Remove existing items from this recipe first
+    const filteredItems = state.groceryItems.filter((item) => item.recipeId !== recipeId);
+    const groceryItems = [...filteredItems, ...newItems];
+    saveGroceryList(groceryItems);
+    set({ groceryItems, isSyncing: true });
+
+    // Sync to Firestore
+    if (isSignedIn()) {
+      saveGroceryListToFirestore(groceryItems)
+        .then(() => set({ isSyncing: false }))
+        .catch((error) => {
+          console.error('Failed to sync grocery list:', error);
+          set({ isSyncing: false, lastSyncError: error.message });
+        });
+    } else {
+      set({ isSyncing: false });
+    }
   },
 
   removeFromGroceryList: (recipeId) => {
-    set((state) => {
-      const groceryItems = state.groceryItems.filter((item) => item.recipeId !== recipeId);
-      saveGroceryList(groceryItems);
-      return { groceryItems };
-    });
+    const groceryItems = get().groceryItems.filter((item) => item.recipeId !== recipeId);
+    saveGroceryList(groceryItems);
+    set({ groceryItems, isSyncing: true });
+
+    // Sync to Firestore
+    if (isSignedIn()) {
+      saveGroceryListToFirestore(groceryItems)
+        .then(() => set({ isSyncing: false }))
+        .catch((error) => {
+          console.error('Failed to sync grocery list:', error);
+          set({ isSyncing: false, lastSyncError: error.message });
+        });
+    } else {
+      set({ isSyncing: false });
+    }
   },
 
   toggleGroceryItem: (itemId) => {
-    set((state) => {
-      const groceryItems = state.groceryItems.map((item) =>
-        item.id === itemId ? { ...item, bought: !item.bought } : item
-      );
-      saveGroceryList(groceryItems);
-      return { groceryItems };
-    });
+    const groceryItems = get().groceryItems.map((item) =>
+      item.id === itemId ? { ...item, bought: !item.bought } : item
+    );
+    saveGroceryList(groceryItems);
+    set({ groceryItems, isSyncing: true });
+
+    // Sync to Firestore
+    if (isSignedIn()) {
+      saveGroceryListToFirestore(groceryItems)
+        .then(() => set({ isSyncing: false }))
+        .catch((error) => {
+          console.error('Failed to sync grocery item:', error);
+          set({ isSyncing: false, lastSyncError: error.message });
+        });
+    } else {
+      set({ isSyncing: false });
+    }
   },
 
   clearGroceryList: () => {
-    set({ groceryItems: [] });
+    set({ groceryItems: [], isSyncing: true });
     saveGroceryList([]);
+
+    // Sync to Firestore
+    if (isSignedIn()) {
+      clearGroceryListFromFirestore()
+        .then(() => set({ isSyncing: false }))
+        .catch((error) => {
+          console.error('Failed to clear grocery list:', error);
+          set({ isSyncing: false, lastSyncError: error.message });
+        });
+    } else {
+      set({ isSyncing: false });
+    }
   },
 
   toggleShowCompletedGroceries: () => {
@@ -359,6 +610,18 @@ export const useRecipeStore = create<RecipeStore>((set, get) => ({
     const servingsMap = { ...state.servingsMap };
     delete servingsMap[recipeId];
     saveServingsMap(servingsMap);
-    set({ activeTimers, servingsMap });
+    set({ activeTimers, servingsMap, isSyncing: true });
+
+    // Sync to Firestore
+    if (isSignedIn()) {
+      saveServingsMapToFirestore(servingsMap)
+        .then(() => set({ isSyncing: false }))
+        .catch((error) => {
+          console.error('Failed to sync servings reset:', error);
+          set({ isSyncing: false, lastSyncError: error.message });
+        });
+    } else {
+      set({ isSyncing: false });
+    }
   },
 }));

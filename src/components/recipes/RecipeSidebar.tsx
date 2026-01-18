@@ -166,6 +166,35 @@ const LanguageFlag = styled.span`
   font-size: 16px;
 `;
 
+const CheckboxLabel = styled.label`
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 14px;
+  border-radius: 10px;
+  cursor: pointer;
+  font-size: 14px;
+  color: ${colors.textMain};
+  font-weight: 500;
+  transition: all 0.15s;
+
+  &:hover {
+    background: rgba(44, 62, 80, 0.05);
+  }
+
+  input[type="checkbox"] {
+    width: 16px;
+    height: 16px;
+    accent-color: ${colors.primary};
+    cursor: pointer;
+  }
+
+  .material-symbols-outlined {
+    font-size: 18px;
+    color: ${colors.textMuted};
+  }
+`;
+
 const LANGUAGE_OPTIONS: { code: string; label: string; flag: string }[] = [
   { code: 'en', label: 'English', flag: '🇺🇸' },
   { code: 'he', label: 'עברית', flag: '🇮🇱' },
@@ -182,10 +211,12 @@ interface RecipeSidebarProps {
   selectedTag: string | null;
   selectedLanguage: string | null;
   searchQuery: string;
+  hideBuiltIn: boolean;
   onSelectCategory: (category: string | null) => void;
   onSelectTag: (tag: string | null) => void;
   onSelectLanguage: (language: string | null) => void;
   onSearchChange: (query: string) => void;
+  onToggleHideBuiltIn: () => void;
   recipeCount: number;
 }
 
@@ -197,20 +228,23 @@ export const RecipeSidebar: React.FC<RecipeSidebarProps> = ({
   selectedTag,
   selectedLanguage,
   searchQuery,
+  hideBuiltIn,
   onSelectCategory,
   onSelectTag,
   onSelectLanguage,
   onSearchChange,
+  onToggleHideBuiltIn,
   recipeCount,
 }) => {
   const { t } = useTranslation();
-  const hasFilters = selectedCategory || selectedTag || selectedLanguage || searchQuery;
+  const hasFilters = selectedCategory || selectedTag || selectedLanguage || searchQuery || hideBuiltIn;
 
   const clearFilters = () => {
     onSelectCategory(null);
     onSelectTag(null);
     onSelectLanguage(null);
     onSearchChange('');
+    if (hideBuiltIn) onToggleHideBuiltIn();
   };
 
   // Filter language options to only show languages that exist in recipes
@@ -299,6 +333,19 @@ export const RecipeSidebar: React.FC<RecipeSidebarProps> = ({
           </TagsContainer>
         </Section>
       )}
+
+      <Section>
+        <SectionTitle>{t('sidebar.viewOptions')}</SectionTitle>
+        <CheckboxLabel>
+          <input
+            type="checkbox"
+            checked={hideBuiltIn}
+            onChange={onToggleHideBuiltIn}
+          />
+          <span className="material-symbols-outlined">visibility_off</span>
+          {t('sidebar.hideBuiltIn')}
+        </CheckboxLabel>
+      </Section>
 
       <RecipeCount>
         <span>

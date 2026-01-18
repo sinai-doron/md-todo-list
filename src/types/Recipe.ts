@@ -72,6 +72,7 @@ export interface Recipe {
   nutrition?: NutritionInfo;
   chefTip?: string;
   language?: RecipeLanguage; // Language for RTL/LTR support
+  isBuiltIn?: boolean; // True for built-in recipes that cannot be edited/deleted
   createdAt: number;
   updatedAt: number;
 }

@@ -3,6 +3,8 @@ import { useNavigate } from 'react-router-dom';
 import styled from 'styled-components';
 import { SEO } from '../components/SEO';
 import { useRecipeStore } from '../stores/recipeStore';
+import { useAuth } from '../firebase';
+import { UserMenu } from '../components/UserMenu';
 import type { GroceryItem, IngredientCategory } from '../types/Recipe';
 import { CATEGORY_ORDER, formatQuantity } from '../types/Recipe';
 
@@ -605,16 +607,27 @@ const FloatingAddButton = styled.button`
 
 export function ShoppingListPage() {
   const navigate = useNavigate();
+  const { user } = useAuth();
 
   const groceryItems = useRecipeStore((s) => s.groceryItems);
-  const loadFromStorage = useRecipeStore((s) => s.loadFromStorage);
+  const initializeFirebaseSync = useRecipeStore((s) => s.initializeFirebaseSync);
   const toggleGroceryItem = useRecipeStore((s) => s.toggleGroceryItem);
   const clearGroceryList = useRecipeStore((s) => s.clearGroceryList);
 
-  // Load from storage on mount
+  // Initialize Firebase sync on mount
   useEffect(() => {
-    loadFromStorage();
-  }, [loadFromStorage]);
+    let cleanup: (() => void) | undefined;
+
+    const init = async () => {
+      cleanup = await initializeFirebaseSync();
+    };
+
+    init();
+
+    return () => {
+      if (cleanup) cleanup();
+    };
+  }, [initializeFirebaseSync, user]);
 
   // Group items by category
   const groupedItems = useMemo(() => {
@@ -678,6 +691,7 @@ export function ShoppingListPage() {
             <MobileMenuButton>
               <span className="material-symbols-outlined">menu</span>
             </MobileMenuButton>
+            <UserMenu />
           </HeaderRight>
         </HeaderContent>
       </Header>

@@ -7,9 +7,11 @@ import { useLanguage } from '../i18n/useLanguage';
 import { SEO } from '../components/SEO';
 import { useRecipeStore } from '../stores/recipeStore';
 import { useMealPlanStore } from '../stores/mealPlanStore';
+import { useAuth } from '../firebase';
 import { MealPlanWeekView } from '../components/meal-plan/MealPlanWeekView';
 import { RecipeSourcePanel } from '../components/meal-plan/RecipeSourcePanel';
 import { MealPlanShoppingModal } from '../components/meal-plan/MealPlanShoppingModal';
+import { UserMenu } from '../components/UserMenu';
 import type { MealType, DraggedRecipe } from '../types/MealPlan';
 import type { Recipe } from '../types/Recipe';
 
@@ -274,9 +276,10 @@ export function MealPlanPage() {
   const navigate = useNavigate();
   const { t } = useTranslation();
   const { currentLanguage, changeLanguage, isRTL } = useLanguage();
+  const { user } = useAuth();
 
   const recipes = useRecipeStore((s) => s.recipes);
-  const loadRecipes = useRecipeStore((s) => s.loadFromStorage);
+  const initializeFirebaseSync = useRecipeStore((s) => s.initializeFirebaseSync);
 
   const {
     currentWeekStart,
@@ -294,9 +297,19 @@ export function MealPlanPage() {
 
   // Load data on mount
   useEffect(() => {
-    loadRecipes();
-    loadMealPlan();
-  }, [loadRecipes, loadMealPlan]);
+    let cleanup: (() => void) | undefined;
+
+    const init = async () => {
+      cleanup = await initializeFirebaseSync();
+      loadMealPlan();
+    };
+
+    init();
+
+    return () => {
+      if (cleanup) cleanup();
+    };
+  }, [initializeFirebaseSync, loadMealPlan, user]);
 
   // Filter recipes by search query
   const filteredRecipes = recipes.filter((recipe) => {
@@ -428,6 +441,7 @@ export function MealPlanPage() {
               <span className="material-symbols-outlined">shopping_cart</span>
               {t('mealPlan.shoppingList.generateButton')}
             </ShoppingListButton>
+            <UserMenu />
           </HeaderRight>
         </HeaderContent>
       </Header>
