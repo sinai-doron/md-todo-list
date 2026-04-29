@@ -80,7 +80,8 @@ Wraps Tiptap. Sole consumer of `tiptap-markdown` and `dompurify`.
   - `placeholder?: string` — passed to `@tiptap/extension-placeholder`.
 - **Behavior:**
   - On mount, parses `value` (markdown → ProseMirror doc) via `tiptap-markdown`.
-  - On every transaction, serializes the doc back to markdown and calls `onChange`.
+  - On every transaction, serializes the doc back to markdown and calls `onChange` (debounced ~150ms to avoid thrash on large documents).
+  - Treats `value` as a one-way input: the editor re-syncs from `value` only when the incoming string differs from its own most recent serialization (e.g., on file drop or paste). This prevents the controlled-component echo loop where parent state updates cause cursor jumps.
   - Detects unknown HTML during parse; routes to `RawHtmlBlock` / `RawHtmlInline`.
 
 ### `MarkdownEditorToolbar.tsx` (new, internal to `MarkdownEditor`)
@@ -101,7 +102,7 @@ Atoms (non-editable internals) that render sanitized HTML strings for tags Tipta
 - Block: `<details>`, `<summary>`, `<figure>`, `<figcaption>`, `<video>`, `<audio>`, `<picture>`, `<source>`.
 - Inline: `<kbd>`, `<mark>`, `<abbr>`, `<sub>`, `<sup>`, `<ins>`, `<var>`, `<samp>`, `<dfn>`.
 
-The user can select and delete these nodes but cannot edit their internals. Their HTML is sanitized at parse time using DOMPurify with an allowlist matching the current `rehype-sanitize` schema. On export, the node serializes back to its original HTML string verbatim.
+The user can select and delete these nodes but cannot edit their internals. Their HTML is sanitized at parse time using DOMPurify with an allowlist matching the current `rehype-sanitize` schema. On export, the node emits the **sanitized** string it stored at parse time — not the original — so dangerous content stripped on load is not reintroduced on save.
 
 ### `MarkdownVisualizerPage.tsx` (modified)
 - Collapse the dual-pane layout to single-pane.
@@ -129,7 +130,7 @@ Unknown HTML handling:
 
 1. **Parse:** Run the markdown source through `tiptap-markdown`. Before handing to Tiptap, intercept HTML tokens that fall outside the natively-modeled set; sanitize them with DOMPurify (allowlist mirrors `MarkdownPreview`'s current `rehype-sanitize` schema); insert as `RawHtmlBlock` or `RawHtmlInline` nodes.
 2. **Edit:** Native nodes (paragraphs, headings, lists, tables, etc.) are fully editable. Raw HTML nodes are atomic — selectable and deletable, not editable inside.
-3. **Serialize:** `tiptap-markdown` serializes native nodes; raw HTML nodes contribute their original HTML string verbatim.
+3. **Serialize:** `tiptap-markdown` serializes native nodes; raw HTML nodes contribute the sanitized HTML string they stored at parse time.
 
 Code blocks use `@tiptap/extension-code-block-lowlight` with `lowlight` for syntax highlighting, replacing `react-syntax-highlighter`. Fenced code (` ```js `) round-trips cleanly.
 
@@ -165,7 +166,7 @@ Roughly +30 to +60 KB gzipped after removals. Acceptable for the feature upgrade
 | Bullet / Ordered / Task list | `toggleBulletList/OrderedList/TaskList` | `isActive('bulletList')` etc. |
 | Blockquote | `toggleBlockquote` | `isActive('blockquote')` |
 | Code block | `toggleCodeBlock` | `isActive('codeBlock')` |
-| Link | Prompt for URL → `setLink({ href })` | `isActive('link')` |
+| Link | `window.prompt` for URL → `setLink({ href })`; if URL empty, unset the link | `isActive('link')` |
 | Table | `insertTable({ rows: 3, cols: 3, withHeaderRow: true })` | n/a |
 | HR | `setHorizontalRule()` | n/a |
 
