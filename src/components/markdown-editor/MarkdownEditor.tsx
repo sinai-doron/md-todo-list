@@ -19,6 +19,7 @@ import styled from 'styled-components';
 import { MarkdownEditorToolbar } from './MarkdownEditorToolbar';
 import { RawHtmlBlock } from './extensions/RawHtmlBlock';
 import { RawHtmlInline } from './extensions/RawHtmlInline';
+import { getMarkdown } from './getMarkdown';
 
 const Container = styled.div`
   display: flex;
@@ -181,8 +182,7 @@ export const MarkdownEditor: React.FC<Props> = ({ value, onChange, readOnly = fa
     onUpdate: ({ editor: e }) => {
       if (debounceTimer.current) clearTimeout(debounceTimer.current);
       debounceTimer.current = setTimeout(() => {
-        const storage = e.storage as unknown as { markdown: { getMarkdown: () => string } };
-        const md = storage.markdown.getMarkdown();
+        const md = getMarkdown(e);
         lastEmitted.current = md;
         onChange(md);
       }, 150);
