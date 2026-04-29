@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import styled from 'styled-components';
 import { useMarkdownFile } from '../hooks/useMarkdownFile';
 import { useEngagementTracking } from '../hooks/useAnalytics';
-import { MarkdownPreview } from '../components/MarkdownPreview';
+import { MarkdownEditor } from '../components/markdown-editor';
 import { SEO } from '../components/SEO';
 import { parseMarkdownToTasks } from '../utils/markdownParser';
 import {
@@ -49,10 +49,7 @@ const BackButton = styled.button`
   border-radius: 50%;
   transition: all 0.2s;
 
-  &:hover {
-    background: #f0f0f0;
-    color: #333;
-  }
+  &:hover { background: #f0f0f0; color: #333; }
 `;
 
 const Title = styled.h1`
@@ -64,9 +61,7 @@ const Title = styled.h1`
   align-items: center;
   gap: 10px;
 
-  .material-symbols-outlined {
-    color: #6200ee;
-  }
+  .material-symbols-outlined { color: #6200ee; }
 `;
 
 const HeaderRight = styled.div`
@@ -91,11 +86,32 @@ const TaskCountBadge = styled.span`
   font-weight: 500;
 `;
 
+const ActionButton = styled.button`
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 14px;
+  background: white;
+  color: #6200ee;
+  border: 1px solid #6200ee;
+  border-radius: 6px;
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.15s;
+
+  &:hover { background: rgba(98, 0, 238, 0.06); }
+  &:disabled { opacity: 0.4; cursor: not-allowed; }
+
+  .material-symbols-outlined { font-size: 18px; }
+`;
+
 const Content = styled.main`
   flex: 1;
   display: flex;
   flex-direction: column;
   padding: 24px;
+  gap: 16px;
   overflow: hidden;
   min-height: 0;
 `;
@@ -105,7 +121,6 @@ const ErrorMessage = styled.div`
   color: #d32f2f;
   padding: 12px 16px;
   border-radius: 6px;
-  margin-bottom: 16px;
   font-size: 14px;
   display: flex;
   align-items: center;
@@ -116,86 +131,23 @@ const ErrorMessage = styled.div`
 const CloseErrorButton = styled.button`
   background: none;
   border: none;
-  font-size: 16px;
   color: #d32f2f;
   cursor: pointer;
-  padding: 2px;
   display: flex;
   align-items: center;
-  justify-content: center;
   border-radius: 4px;
   margin-left: auto;
-  transition: all 0.2s;
+  padding: 2px;
 
-  &:hover {
-    background: rgba(211, 47, 47, 0.1);
-  }
-`;
-
-const DualPaneContainer = styled.div`
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 24px;
-  flex: 1;
-  min-height: 0;
-
-  @media (max-width: 900px) {
-    grid-template-columns: 1fr;
-    grid-template-rows: 1fr 1fr;
-  }
-`;
-
-const Pane = styled.div`
-  display: flex;
-  flex-direction: column;
-  min-height: 0;
-  overflow: hidden;
-  background: white;
-  border-radius: 12px;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
-`;
-
-const PaneHeader = styled.div`
-  padding: 16px 20px;
-  border-bottom: 1px solid #e0e0e0;
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  flex-shrink: 0;
-`;
-
-const PaneTitle = styled.h2`
-  margin: 0;
-  font-size: 14px;
-  font-weight: 600;
-  color: #666;
-  text-transform: uppercase;
-  letter-spacing: 0.5px;
-`;
-
-const PaneContent = styled.div`
-  flex: 1;
-  display: flex;
-  flex-direction: column;
-  min-height: 0;
-  overflow: hidden;
-`;
-
-const InputPane = styled.div`
-  flex: 1;
-  display: flex;
-  flex-direction: column;
-  min-height: 0;
-  padding: 20px;
-  gap: 16px;
+  &:hover { background: rgba(211, 47, 47, 0.1); }
 `;
 
 const DropZone = styled.div<{ $isDragging: boolean }>`
-  border: 2px dashed ${props => props.$isDragging ? '#6200ee' : '#ddd'};
+  border: 2px dashed ${({ $isDragging }) => ($isDragging ? '#6200ee' : '#ddd')};
   border-radius: 6px;
   padding: 12px 16px;
   text-align: center;
-  background: ${props => props.$isDragging ? 'rgba(98, 0, 238, 0.05)' : '#fafafa'};
+  background: ${({ $isDragging }) => ($isDragging ? 'rgba(98, 0, 238, 0.05)' : 'white')};
   transition: all 0.2s;
   cursor: pointer;
   flex-shrink: 0;
@@ -203,10 +155,7 @@ const DropZone = styled.div<{ $isDragging: boolean }>`
   align-items: center;
   gap: 12px;
 
-  &:hover {
-    border-color: #6200ee;
-    background: rgba(98, 0, 238, 0.02);
-  }
+  &:hover { border-color: #6200ee; background: rgba(98, 0, 238, 0.02); }
 `;
 
 const DropZoneIcon = styled.div`
@@ -237,31 +186,10 @@ const HiddenFileInput = styled.input`
   display: none;
 `;
 
-const TextArea = styled.textarea`
+const EditorWrap = styled.div`
   flex: 1;
+  display: flex;
   min-height: 0;
-  padding: 16px;
-  border: 2px solid #e0e0e0;
-  border-radius: 8px;
-  font-family: 'Courier New', monospace;
-  font-size: 14px;
-  resize: none;
-  transition: border-color 0.2s;
-
-  &:focus {
-    outline: none;
-    border-color: #6200ee;
-  }
-
-  &::placeholder {
-    color: #999;
-  }
-`;
-
-const PreviewPane = styled.div`
-  flex: 1;
-  overflow-y: auto;
-  padding: 20px;
 `;
 
 export const MarkdownVisualizerPage: React.FC = () => {
@@ -283,10 +211,7 @@ export const MarkdownVisualizerPage: React.FC = () => {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const previousContentRef = useRef('');
 
-  // Parse tasks for preview count
   const previewTasks = content.trim() ? parseMarkdownToTasks(content) : [];
-
-  // Count tasks (excluding headers)
   const countTasks = (tasks: Task[]): number => {
     let count = 0;
     tasks.forEach(task => {
@@ -295,10 +220,8 @@ export const MarkdownVisualizerPage: React.FC = () => {
     });
     return count;
   };
-
   const taskCount = countTasks(previewTasks);
 
-  // Track paste events
   useEffect(() => {
     if (content && !previousContentRef.current && content.length > 10) {
       trackMarkdownVisualizerTextPasted();
@@ -306,9 +229,7 @@ export const MarkdownVisualizerPage: React.FC = () => {
     previousContentRef.current = content;
   }, [content]);
 
-  const handleBack = useCallback(() => {
-    navigate('/');
-  }, [navigate]);
+  const handleBack = useCallback(() => navigate('/'), [navigate]);
 
   const handleFileInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -322,28 +243,45 @@ export const MarkdownVisualizerPage: React.FC = () => {
   const handleDropWithTracking = (e: React.DragEvent) => {
     handleDrop(e);
     const file = e.dataTransfer.files?.[0];
-    if (file) {
-      trackMarkdownVisualizerFileUploaded();
+    if (file) trackMarkdownVisualizerFileUploaded();
+  };
+
+  const handleCopyMd = async () => {
+    try {
+      await navigator.clipboard.writeText(content);
+    } catch (err) {
+      console.error('Failed to copy markdown:', err);
     }
   };
 
-  // Handle Escape key to go back
-  useEffect(() => {
-    const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') {
-        handleBack();
-      }
-    };
+  const handleDownloadMd = () => {
+    const blob = new Blob([content], { type: 'text/markdown;charset=utf-8' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    const ts = new Date().toISOString().replace(/[:.]/g, '-').slice(0, 19);
+    a.href = url;
+    a.download = `markdown-${ts}.md`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+  };
 
-    document.addEventListener('keydown', handleKeyDown);
-    return () => document.removeEventListener('keydown', handleKeyDown);
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') handleBack();
+    };
+    document.addEventListener('keydown', onKey);
+    return () => document.removeEventListener('keydown', onKey);
   }, [handleBack]);
+
+  const hasContent = content.trim().length > 0;
 
   return (
     <PageContainer>
       <SEO
         title="MD Files Preview - Markdown Visualizer"
-        description="Preview and visualize markdown files instantly. Upload or paste MD files to see formatted preview with syntax highlighting, tables, and task detection."
+        description="Preview and edit markdown files instantly. Upload or paste MD files to see formatted preview with syntax highlighting, tables, and task detection."
         canonical="/visualizer"
         keywords="md files preview, markdown preview, md visualizer, markdown viewer, markdown file reader"
       />
@@ -368,6 +306,14 @@ export const MarkdownVisualizerPage: React.FC = () => {
               <span style={{ color: '#999' }}>No tasks detected</span>
             )}
           </TaskCount>
+          <ActionButton onClick={handleCopyMd} disabled={!hasContent} title="Copy markdown to clipboard">
+            <span className="material-symbols-outlined">content_copy</span>
+            Copy MD
+          </ActionButton>
+          <ActionButton onClick={handleDownloadMd} disabled={!hasContent} title="Download as .md file">
+            <span className="material-symbols-outlined">download</span>
+            Download
+          </ActionButton>
         </HeaderRight>
       </Header>
 
@@ -382,86 +328,36 @@ export const MarkdownVisualizerPage: React.FC = () => {
           </ErrorMessage>
         )}
 
-        <DualPaneContainer>
-          {/* Left Pane: Input */}
-          <Pane>
-            <PaneHeader>
-              <PaneTitle>Input</PaneTitle>
-            </PaneHeader>
-            <PaneContent>
-              <InputPane>
-                <DropZone
-                  $isDragging={isDragging}
-                  onDragOver={handleDragOver}
-                  onDragLeave={handleDragLeave}
-                  onDrop={handleDropWithTracking}
-                  onClick={() => fileInputRef.current?.click()}
-                >
-                  <DropZoneIcon>
-                    <span className="material-symbols-outlined">upload_file</span>
-                  </DropZoneIcon>
-                  <DropZoneTextContainer>
-                    <DropZoneText>Drop a .md file or click to browse</DropZoneText>
-                    <DropZoneSubtext>Max 1MB</DropZoneSubtext>
-                  </DropZoneTextContainer>
-                </DropZone>
+        <DropZone
+          $isDragging={isDragging}
+          onDragOver={handleDragOver}
+          onDragLeave={handleDragLeave}
+          onDrop={handleDropWithTracking}
+          onClick={() => fileInputRef.current?.click()}
+        >
+          <DropZoneIcon>
+            <span className="material-symbols-outlined">upload_file</span>
+          </DropZoneIcon>
+          <DropZoneTextContainer>
+            <DropZoneText>Drop a .md file or click to browse</DropZoneText>
+            <DropZoneSubtext>Max 1MB · or paste / type below</DropZoneSubtext>
+          </DropZoneTextContainer>
+        </DropZone>
 
-                <HiddenFileInput
-                  ref={fileInputRef}
-                  type="file"
-                  accept=".md"
-                  onChange={handleFileInputChange}
-                />
+        <HiddenFileInput
+          ref={fileInputRef}
+          type="file"
+          accept=".md"
+          onChange={handleFileInputChange}
+        />
 
-                <TextArea
-                  value={content}
-                  onChange={(e) => setContent(e.target.value)}
-                  placeholder="Or paste your markdown here...
-
-# Example Heading
-
-- Task item 1
-- Task item 2
-  - Subtask 2.1
-  - Subtask 2.2
-
-## Another Section
-
-| Column 1 | Column 2 |
-|----------|----------|
-| Cell 1   | Cell 2   |
-
-**Bold text** and *italic text*
-
-## HTML Support
-
-<details>
-<summary>Click to expand</summary>
-
-Hidden content here!
-
-</details>
-
-Press <kbd>Ctrl</kbd> + <kbd>C</kbd> to copy.
-
-This is <mark>highlighted</mark> text."
-                />
-              </InputPane>
-            </PaneContent>
-          </Pane>
-
-          {/* Right Pane: Preview */}
-          <Pane>
-            <PaneHeader>
-              <PaneTitle>Preview</PaneTitle>
-            </PaneHeader>
-            <PaneContent>
-              <PreviewPane>
-                <MarkdownPreview content={content} />
-              </PreviewPane>
-            </PaneContent>
-          </Pane>
-        </DualPaneContainer>
+        <EditorWrap>
+          <MarkdownEditor
+            value={content}
+            onChange={setContent}
+            placeholder="Start typing markdown, or drop a .md file above..."
+          />
+        </EditorWrap>
       </Content>
     </PageContainer>
   );
