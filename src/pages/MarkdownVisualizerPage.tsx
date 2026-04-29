@@ -142,46 +142,6 @@ const CloseErrorButton = styled.button`
   &:hover { background: rgba(211, 47, 47, 0.1); }
 `;
 
-const DropZone = styled.div<{ $isDragging: boolean }>`
-  border: 2px dashed ${({ $isDragging }) => ($isDragging ? '#6200ee' : '#ddd')};
-  border-radius: 6px;
-  padding: 12px 16px;
-  text-align: center;
-  background: ${({ $isDragging }) => ($isDragging ? 'rgba(98, 0, 238, 0.05)' : 'white')};
-  transition: all 0.2s;
-  cursor: pointer;
-  flex-shrink: 0;
-  display: flex;
-  align-items: center;
-  gap: 12px;
-
-  &:hover { border-color: #6200ee; background: rgba(98, 0, 238, 0.02); }
-`;
-
-const DropZoneIcon = styled.div`
-  font-size: 24px;
-  color: #6200ee;
-  display: flex;
-  align-items: center;
-`;
-
-const DropZoneTextContainer = styled.div`
-  text-align: left;
-`;
-
-const DropZoneText = styled.p`
-  margin: 0;
-  font-size: 14px;
-  color: #333;
-  font-weight: 500;
-`;
-
-const DropZoneSubtext = styled.p`
-  margin: 2px 0 0 0;
-  font-size: 12px;
-  color: #888;
-`;
-
 const HiddenFileInput = styled.input`
   display: none;
 `;
@@ -190,6 +150,46 @@ const EditorWrap = styled.div`
   flex: 1;
   display: flex;
   min-height: 0;
+`;
+
+const DropOverlay = styled.div`
+  position: fixed;
+  inset: 0;
+  background: rgba(98, 0, 238, 0.08);
+  border: 4px dashed #6200ee;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+  pointer-events: none;
+  backdrop-filter: blur(2px);
+`;
+
+const DropOverlayMessage = styled.div`
+  background: white;
+  padding: 24px 32px;
+  border-radius: 12px;
+  box-shadow: 0 8px 24px rgba(98, 0, 238, 0.2);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+
+  .material-symbols-outlined {
+    font-size: 48px;
+    color: #6200ee;
+  }
+
+  .title {
+    font-size: 18px;
+    font-weight: 600;
+    color: #333;
+  }
+
+  .subtitle {
+    font-size: 13px;
+    color: #888;
+  }
 `;
 
 export const MarkdownVisualizerPage: React.FC = () => {
@@ -248,6 +248,15 @@ export const MarkdownVisualizerPage: React.FC = () => {
     if (file) trackMarkdownVisualizerFileUploaded();
   };
 
+  // The native dragleave fires when the cursor moves into a child element,
+  // not just when leaving the container. Filter those out so the fullscreen
+  // overlay doesn't flicker as the cursor crosses internal element boundaries.
+  const handleDragLeavePage = (e: React.DragEvent<HTMLDivElement>) => {
+    const next = e.relatedTarget as Node | null;
+    if (next && e.currentTarget.contains(next)) return;
+    handleDragLeave(e);
+  };
+
   const handleCopyMd = async () => {
     try {
       await navigator.clipboard.writeText(content);
@@ -280,7 +289,11 @@ export const MarkdownVisualizerPage: React.FC = () => {
   const hasContent = content.trim().length > 0;
 
   return (
-    <PageContainer>
+    <PageContainer
+      onDragOver={handleDragOver}
+      onDragLeave={handleDragLeavePage}
+      onDrop={handleDropWithTracking}
+    >
       <SEO
         title="MD Files Preview - Markdown Visualizer"
         description="Preview and edit markdown files instantly. Upload or paste MD files to see formatted preview with syntax highlighting, tables, and task detection."
@@ -308,6 +321,10 @@ export const MarkdownVisualizerPage: React.FC = () => {
               <span style={{ color: '#999' }}>No tasks detected</span>
             )}
           </TaskCount>
+          <ActionButton onClick={() => fileInputRef.current?.click()} title="Upload a .md file (or just drop one anywhere)">
+            <span className="material-symbols-outlined">upload_file</span>
+            Upload
+          </ActionButton>
           <ActionButton onClick={handleCopyMd} disabled={!hasContent} title="Copy markdown to clipboard">
             <span className="material-symbols-outlined">content_copy</span>
             Copy MD
@@ -330,22 +347,6 @@ export const MarkdownVisualizerPage: React.FC = () => {
           </ErrorMessage>
         )}
 
-        <DropZone
-          $isDragging={isDragging}
-          onDragOver={handleDragOver}
-          onDragLeave={handleDragLeave}
-          onDrop={handleDropWithTracking}
-          onClick={() => fileInputRef.current?.click()}
-        >
-          <DropZoneIcon>
-            <span className="material-symbols-outlined">upload_file</span>
-          </DropZoneIcon>
-          <DropZoneTextContainer>
-            <DropZoneText>Drop a .md file or click to browse</DropZoneText>
-            <DropZoneSubtext>Max 1MB · or paste / type below</DropZoneSubtext>
-          </DropZoneTextContainer>
-        </DropZone>
-
         <HiddenFileInput
           ref={fileInputRef}
           type="file"
@@ -357,10 +358,20 @@ export const MarkdownVisualizerPage: React.FC = () => {
           <MarkdownEditor
             value={content}
             onChange={setContent}
-            placeholder="Start typing markdown, or drop a .md file above..."
+            placeholder="Start typing markdown, or drop a .md file anywhere on the page..."
           />
         </EditorWrap>
       </Content>
+
+      {isDragging && (
+        <DropOverlay>
+          <DropOverlayMessage>
+            <span className="material-symbols-outlined">upload_file</span>
+            <div className="title">Drop your .md file</div>
+            <div className="subtitle">Max 1MB</div>
+          </DropOverlayMessage>
+        </DropOverlay>
+      )}
     </PageContainer>
   );
 };
