@@ -1,4 +1,4 @@
-import React, { useRef, useEffect, useCallback } from 'react';
+import React, { useRef, useEffect, useCallback, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import styled from 'styled-components';
 import { useMarkdownFile } from '../hooks/useMarkdownFile';
@@ -211,16 +211,18 @@ export const MarkdownVisualizerPage: React.FC = () => {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const previousContentRef = useRef('');
 
-  const previewTasks = content.trim() ? parseMarkdownToTasks(content) : [];
-  const countTasks = (tasks: Task[]): number => {
-    let count = 0;
-    tasks.forEach(task => {
-      if (!task.isHeader) count++;
-      if (task.children) count += countTasks(task.children);
-    });
-    return count;
-  };
-  const taskCount = countTasks(previewTasks);
+  const taskCount = useMemo(() => {
+    if (!content.trim()) return 0;
+    const countTasks = (tasks: Task[]): number => {
+      let count = 0;
+      tasks.forEach(task => {
+        if (!task.isHeader) count++;
+        if (task.children) count += countTasks(task.children);
+      });
+      return count;
+    };
+    return countTasks(parseMarkdownToTasks(content));
+  }, [content]);
 
   useEffect(() => {
     if (content && !previousContentRef.current && content.length > 10) {
