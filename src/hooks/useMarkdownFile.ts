@@ -8,7 +8,11 @@ export interface UseMarkdownFileReturn {
   clearError: () => void;
   handleDragOver: (e: React.DragEvent) => void;
   handleDragLeave: (e: React.DragEvent) => void;
-  handleDrop: (e: React.DragEvent) => void;
+  // Performs the drop event cleanup (preventDefault/stopPropagation/clear
+  // isDragging) and returns the dropped File, if any. The caller decides
+  // whether to actually load it via handleFileSelect — this lets pages
+  // gate file replacement behind a confirmation prompt.
+  handleDrop: (e: React.DragEvent) => File | null;
   handleFileSelect: (file: File) => void;
   reset: () => void;
 }
@@ -75,16 +79,12 @@ export const useMarkdownFile = (): UseMarkdownFileReturn => {
     setIsDragging(false);
   }, []);
 
-  const handleDrop = useCallback((e: React.DragEvent) => {
+  const handleDrop = useCallback((e: React.DragEvent): File | null => {
     e.preventDefault();
     e.stopPropagation();
     setIsDragging(false);
-
-    const file = e.dataTransfer.files?.[0];
-    if (file) {
-      handleFileSelect(file);
-    }
-  }, [handleFileSelect]);
+    return e.dataTransfer.files?.[0] ?? null;
+  }, []);
 
   return {
     content,

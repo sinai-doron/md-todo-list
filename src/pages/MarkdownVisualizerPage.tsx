@@ -12,6 +12,8 @@ import {
 } from '../utils/analytics';
 import type { Task } from '../types/Task';
 
+const DRAFT_STORAGE_KEY = 'mdv:draft';
+
 const PageContainer = styled.div`
   min-height: 100vh;
   background: #f5f5f5;
@@ -210,6 +212,7 @@ export const MarkdownVisualizerPage: React.FC = () => {
 
   const fileInputRef = useRef<HTMLInputElement>(null);
   const previousContentRef = useRef('');
+  const draftRestoredRef = useRef(false);
 
   const taskCount = useMemo(() => {
     if (!content.trim()) return 0;
@@ -231,21 +234,63 @@ export const MarkdownVisualizerPage: React.FC = () => {
     previousContentRef.current = content;
   }, [content]);
 
+  // Restore the previously auto-saved draft on mount.
+  useEffect(() => {
+    try {
+      const saved = localStorage.getItem(DRAFT_STORAGE_KEY);
+      if (saved && saved.trim().length > 0) {
+        setContent(saved);
+      }
+    } catch {
+      // localStorage may be unavailable (private mode, etc.) — silently skip.
+    }
+    draftRestoredRef.current = true;
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  // Auto-save the current draft to localStorage. Debounced so we don't write
+  // on every keystroke. Only runs after the initial restore so we don't
+  // overwrite the saved value before reading it.
+  useEffect(() => {
+    if (!draftRestoredRef.current) return;
+    const t = setTimeout(() => {
+      try {
+        localStorage.setItem(DRAFT_STORAGE_KEY, content);
+      } catch {
+        // Quota exceeded or unavailable — silently skip; the editor still works.
+      }
+    }, 500);
+    return () => clearTimeout(t);
+  }, [content]);
+
   const handleBack = useCallback(() => navigate('/'), [navigate]);
+
+  // Confirm before replacing existing content with a freshly-loaded file.
+  // Skipped when the editor is empty (first drop, or after a manual clear).
+  const confirmReplaceIfNeeded = useCallback((): boolean => {
+    if (!content.trim()) return true;
+    return window.confirm(
+      'Loading this file will replace the current content. Continue?',
+    );
+  }, [content]);
 
   const handleFileInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
-      handleFileSelect(file);
-      trackMarkdownVisualizerFileUploaded();
+      if (confirmReplaceIfNeeded()) {
+        handleFileSelect(file);
+        trackMarkdownVisualizerFileUploaded();
+      }
     }
     e.target.value = '';
   };
 
   const handleDropWithTracking = (e: React.DragEvent) => {
-    handleDrop(e);
-    const file = e.dataTransfer.files?.[0];
-    if (file) trackMarkdownVisualizerFileUploaded();
+    const file = handleDrop(e);
+    if (!file) return;
+    if (!confirmReplaceIfNeeded()) return;
+    handleFileSelect(file);
+    trackMarkdownVisualizerFileUploaded();
   };
 
   // The native dragleave fires when the cursor moves into a child element,

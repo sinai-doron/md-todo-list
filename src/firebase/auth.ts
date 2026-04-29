@@ -5,41 +5,47 @@ import {
   onAuthStateChanged,
   type User,
 } from 'firebase/auth';
-import { auth } from './config';
+import { auth, isFirebaseConfigured } from './config';
 
 const googleProvider = new GoogleAuthProvider();
 
-// Sign in with Google popup
+const FIREBASE_DISABLED_MSG =
+  'Auth is unavailable: Firebase is not configured (VITE_FIREBASE_API_KEY missing).';
+
 export const signInWithGoogle = async (): Promise<User> => {
+  if (!isFirebaseConfigured) throw new Error(FIREBASE_DISABLED_MSG);
   const result = await signInWithPopup(auth, googleProvider);
   return result.user;
 };
 
-// Sign out
 export const signOut = async (): Promise<void> => {
+  if (!isFirebaseConfigured) return;
   await firebaseSignOut(auth);
 };
 
-// Get current user (null if not signed in)
 export const getCurrentUser = (): User | null => {
+  if (!isFirebaseConfigured) return null;
   return auth.currentUser;
 };
 
-// Subscribe to auth state changes
+// Subscribe to auth state changes. When Firebase is unconfigured, fire the
+// callback once with `null` (signed-out state) and return a no-op unsubscribe.
 export const onAuthChange = (callback: (user: User | null) => void): (() => void) => {
+  if (!isFirebaseConfigured) {
+    callback(null);
+    return () => {};
+  }
   return onAuthStateChanged(auth, callback);
 };
 
-// Get user ID (throws if not signed in)
 export const getUserId = (): string => {
+  if (!isFirebaseConfigured) throw new Error(FIREBASE_DISABLED_MSG);
   const user = auth.currentUser;
-  if (!user) {
-    throw new Error('User not signed in');
-  }
+  if (!user) throw new Error('User not signed in');
   return user.uid;
 };
 
-// Check if user is signed in
 export const isSignedIn = (): boolean => {
+  if (!isFirebaseConfigured) return false;
   return auth.currentUser !== null;
 };
