@@ -15,8 +15,15 @@ export const RawHtmlBlock = Node.create<RawHtmlBlockOptions>({
     return {
       html: {
         default: '',
-        parseHTML: (element) => element.getAttribute('data-raw-html') ?? element.outerHTML,
-        renderHTML: (attributes) => ({
+        // When parsing back from a previously-rendered wrapper, prefer the
+        // stored attribute. Otherwise sanitize the raw element on first parse
+        // so the stored value is the sanitized form (per spec).
+        parseHTML: (element: HTMLElement) => {
+          const stored = element.getAttribute('data-raw-html');
+          if (stored !== null) return stored;
+          return sanitizeHtml(element.outerHTML);
+        },
+        renderHTML: (attributes: Record<string, unknown>) => ({
           'data-raw-html': attributes.html as string,
         }),
       },
@@ -48,7 +55,8 @@ export const RawHtmlBlock = Node.create<RawHtmlBlockOptions>({
       const dom = document.createElement('div');
       dom.className = 'raw-html-block';
       dom.contentEditable = 'false';
-      dom.innerHTML = sanitizeHtml(node.attrs.html as string);
+      // Stored html is already sanitized at parse time.
+      dom.innerHTML = node.attrs.html as string;
       return { dom };
     };
   },

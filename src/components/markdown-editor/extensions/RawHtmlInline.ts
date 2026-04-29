@@ -16,8 +16,12 @@ export const RawHtmlInline = Node.create<RawHtmlInlineOptions>({
     return {
       html: {
         default: '',
-        parseHTML: (element) => element.getAttribute('data-raw-html') ?? element.outerHTML,
-        renderHTML: (attributes) => ({
+        parseHTML: (element: HTMLElement) => {
+          const stored = element.getAttribute('data-raw-html');
+          if (stored !== null) return stored;
+          return sanitizeHtml(element.outerHTML);
+        },
+        renderHTML: (attributes: Record<string, unknown>) => ({
           'data-raw-html': attributes.html as string,
         }),
       },
@@ -53,7 +57,7 @@ export const RawHtmlInline = Node.create<RawHtmlInlineOptions>({
       const dom = document.createElement('span');
       dom.className = 'raw-html-inline';
       dom.contentEditable = 'false';
-      dom.innerHTML = sanitizeHtml(node.attrs.html as string);
+      dom.innerHTML = node.attrs.html as string;
       return { dom };
     };
   },
