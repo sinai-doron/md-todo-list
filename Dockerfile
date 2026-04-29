@@ -25,14 +25,19 @@ COPY . .
 # Accept build arguments for environment variables.
 # Vite inlines `import.meta.env.VITE_*` at build time, so any var the app
 # reads must be both ARG-declared here AND ENV-exported before `pnpm build`.
+#
+# Firebase web client config is intentionally public (security is enforced
+# via Firebase Security Rules, not by hiding the API key). Defaults below
+# point at the mise-prod Firebase project. Override with --build-arg per
+# environment if needed.
 ARG VITE_GA_MEASUREMENT_ID
-ARG VITE_FIREBASE_API_KEY
-ARG VITE_FIREBASE_AUTH_DOMAIN
-ARG VITE_FIREBASE_PROJECT_ID
-ARG VITE_FIREBASE_STORAGE_BUCKET
-ARG VITE_FIREBASE_MESSAGING_SENDER_ID
-ARG VITE_FIREBASE_APP_ID
-ARG VITE_FIREBASE_MEASUREMENT_ID
+ARG VITE_FIREBASE_API_KEY="AIzaSyBoOQcWxH87Z23KgekCN1pBz5yZW40i5CI"
+ARG VITE_FIREBASE_AUTH_DOMAIN="mise-prod.firebaseapp.com"
+ARG VITE_FIREBASE_PROJECT_ID="mise-prod"
+ARG VITE_FIREBASE_STORAGE_BUCKET="mise-prod.firebasestorage.app"
+ARG VITE_FIREBASE_MESSAGING_SENDER_ID="138176380677"
+ARG VITE_FIREBASE_APP_ID="1:138176380677:web:ac045adb03895872ce416c"
+ARG VITE_FIREBASE_MEASUREMENT_ID="G-D2XQ7TZ0ZQ"
 
 ENV VITE_GA_MEASUREMENT_ID=${VITE_GA_MEASUREMENT_ID}
 ENV VITE_FIREBASE_API_KEY=${VITE_FIREBASE_API_KEY}
