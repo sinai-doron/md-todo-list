@@ -273,7 +273,7 @@ export function AdminPage() {
               <input
                 type="file"
                 accept="image/*"
-                ref={el => fileInputRefs.current[recipe.id] = el}
+                ref={(el) => { fileInputRefs.current[recipe.id] = el; }}
                 onChange={(e) => {
                   const file = e.target.files?.[0];
                   if (file) {
